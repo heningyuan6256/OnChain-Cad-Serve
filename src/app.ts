@@ -95,7 +95,7 @@ export async function downloadDraw(params: TransformArgument) {
       console.log("开始下载");
       await downloader.runDownloadDraw();
       // console.log(downloader,'downloader');
-      
+
       console.log("下载结束");
       const filesystem = await downloader.filesystem;
       //TODO 文件转换处理
@@ -171,18 +171,24 @@ export async function transformOstep(params: TransformArgument) {
     const data = await sdk.getStructureTab(params.insId);
     /** 根实例 */
     const rootInstance = data[0];
-    if(!rootInstance.basicReadInstanceInfo.insBom) {
+    if (!rootInstance.basicReadInstanceInfo.insBom) {
       return
     }
     const rootInsAttachTab = await rootInstance.getTabByApicode({
       apicode: "Attachments",
     });
-    if (rootInsAttachTab) {
+
+    const designTab = await rootInstance.getTabByApicode({
+      apicode: "DesignFiles",
+    });
+
+    const designData = designTab ? await designTab.getTabData() : []
+    if (rootInsAttachTab && designData.length) {
       await rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
@@ -208,7 +214,7 @@ export async function transformOstep(params: TransformArgument) {
       const rootFilesystem = filesystem[0];
       //F把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = filePath;
-      rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
+      rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
       rootFilesystem.dimension = "modify";
       const uploader = new Uploader([rootFilesystem], sdk.common);
       console.log("上传");
@@ -251,18 +257,23 @@ export async function transformstep(params: TransformArgument) {
     const data = await sdk.getStructureTab(params.insId);
     /** 根实例 */
     const rootInstance = data[0];
-    if(rootInstance.basicReadInstanceInfo.insBom) {
+    if (rootInstance.basicReadInstanceInfo.insBom) {
       return
     }
     const rootInsAttachTab = await rootInstance.getTabByApicode({
       apicode: "Attachments",
     });
-    if (rootInsAttachTab) {
+    const designTab = await rootInstance.getTabByApicode({
+      apicode: "DesignFiles",
+    });
+
+    const designData = designTab ? await designTab.getTabData() : []
+    if (rootInsAttachTab && designData.length) {
       await rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
@@ -288,7 +299,7 @@ export async function transformstep(params: TransformArgument) {
       const rootFilesystem = filesystem[0];
       //F把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = filePath;
-      rootFilesystem.filename = `${rootFilesystem.data.basicReadInstanceInfo.insDesc}-${rootFilesystem.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
+      rootFilesystem.filename = `${rootFilesystem.data.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
       rootFilesystem.dimension = "modify";
       const uploader = new Uploader([rootFilesystem], sdk.common);
       console.log("上传");

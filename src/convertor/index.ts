@@ -69,24 +69,17 @@ export default class Convertor {
     const proc = Bun.spawn(execute);
     await proc.exited;
     
-
+    console.log("设计文件重命名完成")
     for (const fsy of this.filesystem) {
       await rm(fsy.saveAddress, { force: true })
       const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${fsy.data.basicReadInstanceInfo.publishTime ? "-" + fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''}`
       for (const attFsy of fsy.attachments || []) {
-        if (attFsy.filename.endsWith(".pdf") || attFsy.filename.endsWith(".PDF")) {
-          // 获取原文件的路径、名称和扩展名
-          const oldPath = attFsy.saveAddress;
-          const dir = dirname(oldPath); // 文件目录
-          const extension = extname(oldPath); // 文件扩展名
-          const newPath = join(dir, `${updateName}${extension}`);
-          // 重命名文件
-          await renameSync(oldPath, newPath);
-        } else if (attFsy.filename.endsWith(".slddrw") || attFsy.filename.endsWith(".SLDDRW")) {
-          await rm(attFsy.saveAddress, { force: true })
+       if (attFsy.filename.endsWith(".slddrw") || attFsy.filename.endsWith(".SLDDRW")) {
+          await rm(attFsy.saveAddress, { force: true }).catch(err => console.log(err, "附件重命名错误"))
         }
       }
     }
+    console.log("附件重命名完成")
   }
 
   async transformOStep() {
