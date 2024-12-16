@@ -1,0 +1,10 @@
+version: '3'
+services:
+  backend:
+    image: long0419-docker.pkg.coding.net/onchain-plm/plm-openapi/openapi:latest
+    container_name: openapi
+    restart: always
+    ports:
+      - '9588:9588'
+    networks:
+      - default
