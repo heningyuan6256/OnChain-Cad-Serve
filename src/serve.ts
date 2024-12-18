@@ -5,8 +5,9 @@ import './mod';
 import { Consumer, logLevel } from 'onchain-pulsar'
 import { readFileSync } from 'fs'
 import { BasicEnv } from "../env"; 
-import { receivePulsarMessage } from "./utils/pulsar";
+import { receivePulsarMessage, sendPulsarMessage } from "./utils/pulsar";
 
+// sendPulsarMessage()
 receivePulsarMessage().catch(console.error)
 
 
