@@ -18,7 +18,7 @@ export default class Sdk {
   attachmentSuffix = ['.slddrw', ".SLDDRW", ".pdf", '.PDF'];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: "http://192.168.0.60:8017/api/plm",
+      baseUrl: "http://192.168.0.61:8017/api/plm",
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
@@ -143,26 +143,34 @@ export default class Sdk {
   async getStructureTab(insId: string) {
     const instanceP = (await this.common.getInstanceById(insId)) as FileSelf;
     const tab = await instanceP.getTabByApicode({
-      apicode: "Structure",
+      apicode: "BOM",
     });
 
-    if (tab) {
+    const designTab = await instanceP.getTabByApicode({
+      apicode: "DesignFiles",
+    });
+
+    if (tab && designTab) {
       const StructureData = await tab.getTabData();
       const tabFlattenDatas = utility.ArrayAttributeFlat(
         StructureData
       ) as IRowInstance[];
       const instanceList = [instanceP, ...await this.getInstances(
-        this.filterSuffix(tabFlattenDatas)
+        tabFlattenDatas
       )]
 
       for (const instance of instanceList) {
         const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
-          instance.BasicAttrs,
+          designTab,
           "FileUrl"
+        );
+        const FileNameAttr: BasicsAttribute | undefined = utility.getAttrOf(
+          designTab,
+          "FileName"
         );
         this.initializeFileInfo(instance, {
           fileId: instance.basicReadInstanceInfo.insId,
-          fileName: instance.basicReadInstanceInfo.insDesc,
+          fileName: instance.basicReadInstanceInfo.attributes[FileNameAttr!.id],
           fileUrl: this.getFileUrl(instance, urlAttr),
         });
         const attachmentTab = await instance.getTabByApicode({

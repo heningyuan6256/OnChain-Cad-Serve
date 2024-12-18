@@ -3,6 +3,7 @@
 import { Producer, Consumer, logLevel } from 'onchain-pulsar'
 import { BasicEnv } from '../../env';
 import { sleep } from 'bun';
+import { downloadDraw } from '../app';
 
 const producer = new Producer({
     topic: "persistent://719/dev/instance-released",
@@ -32,7 +33,7 @@ export const sendPulsarMessage = async () => {
         messages: [
             {
                 properties: { pulsar: "flex" },
-                payload: 'Ayeo'
+                payload: `{"type":"downloadDraw","insId":"1866460881178718210"}`
             },
         ]
     });
@@ -53,19 +54,18 @@ export const receivePulsarMessage = async () => {
     await consumer.run({
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
             const publishedInstances = JSON.parse(message.toString("UTF-8"))
-            console.log(publishedInstances, 'publishedInstances');
-            await new Promise(async (resolve) => {
-                // setTimeout(() => {
-                //     console.log(1);
-                // }, 100000)
-                await sleep(10000)
-                resolve({})
-                await ack()
-            })
+            const token = publishedInstances.token
+            const routing = publishedInstances.routing
+            const tenantId = publishedInstances.tenantId
+            if (publishedInstances.type === 'downloadDraw') {
+                await downloadDraw({
+                    token, tenantId,
+                    insId: publishedInstances.reqData.insId,
+                    userId: ''
+                })
+            } else if (publishedInstances.type === 'transformDraw') {
 
-            // TODO
-            // publishedInstances.
-
+            }
             // await ack(); // Default is individual ack
 
         }, autoAck: false, // specify true in order to use automaticAck

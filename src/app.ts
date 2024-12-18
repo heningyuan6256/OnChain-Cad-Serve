@@ -12,7 +12,7 @@ export async function transform(params: TransformArgument) {
     console.log(params, 'params')
     params.insId = params.resData.id
     params.tenantId = params.resData.tenantId
-    params.userId=params.resData.createBy
+    params.userId = params.resData.createBy
     const sdk = new Sdk(params);
     const data = await sdk.getAffectFiles(params.insId);
     const downloader = new Downloader(data, sdk.common);
@@ -37,23 +37,23 @@ export async function transform(params: TransformArgument) {
 
 export async function downloadDraw(params: TransformArgument) {
   try {
-    globalThis.lock = true
     const sdk = new Sdk(params);
-    console.log(params,'params');
-    if(await exists("./transform.zip")){
-      await rm("./transform.zip",{force: true})
+    if (await exists("./transform.zip")) {
+      await rm("./transform.zip", { force: true })
     }
+    // TODO 塞一条正在转换的记录
     const data = await sdk.getStructureTab(params.insId);
-    const downloader = new Downloader(data, sdk.common);
-    await downloader.runDownloadDraw();
-    const filesystem = await downloader.filesystem;
-    const convertor = new Convertor(filesystem);
-    await convertor.updateName();
-    await compressFolder("./transform")
-    await downloader.remove()
-    globalThis.lock = false
+    const InsAttachTab = await data[0].getTabByApicode({ apicode: 'Attachment' })
+    if (InsAttachTab) {
+      const downloader = new Downloader(data, sdk.common);
+      await downloader.runDownloadDraw();
+      const filesystem = await downloader.filesystem;
+      const convertor = new Convertor(filesystem);
+      await convertor.updateName();
+      await compressFolder("./transform")
+      await downloader.remove()
+    }
   } catch (error) {
-    globalThis.lock = false
   }
 }
 
