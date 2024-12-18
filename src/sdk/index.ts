@@ -15,10 +15,10 @@ import { Filesystem } from "../filesystem";
 export default class Sdk {
   common: CommonUtils;
   fileSuffix = [".SLDPRT", ".SLDASM"];
-  attachmentSuffix = ['.slddrw', ".SLDDRW", ".pdf", '.PDF'];
+  attachmentSuffix = [".slddrw", ".SLDDRW", ".pdf", ".PDF"];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: "http://192.168.0.60:8017/api/plm",
+      baseUrl: "http://192.168.0.62:8017/api/plm",
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
@@ -29,34 +29,38 @@ export default class Sdk {
 
   async getAffectFiles(insId: string) {
     const change = await this.common.getInstanceById<IChangeInstance>(insId);
-    await change.getWorkflow();
-    const review = change.basicReadInstanceInfo.workflowNodes.find(
-      (node) => node.apicode == "Review"
-    )!;
+    await change.getWorkflow()
+    // const review = change.basicReadInstanceInfo.workflowNodes.find(
+    //   (node) => node.apicode == "Review"
+    // )!;
     const { allData, usersData } = await change.getWorkflowApprovalRecord();
 
     // 获取审批通过的对象
-    const approved = allData.filter(item => item.approve_instance_id && (item.action == '1'))
+    const approved = allData.filter(
+      (item) => item.approve_instance_id && item.action == "1"
+    );
+    const allNodes: any = [];
 
-    const allNodes: any = []
-
-    change.basicReadInstanceInfo.workflowNodes.forEach(item => {
-
+    change.basicReadInstanceInfo.workflowNodes.forEach((item) => {
       //代表是审核节点
-      if (item.type == '2') {
-        console.log(item, approved)
-        const node = approved.find(v => v.node_id == item.id)
+      if (item.type == "2") {
+        const node = approved.find((v) => v.node_id == item.id);
         if (node) {
           const user = usersData.find(
             (user) => user.value == node.approve_instance_id
           )?.label;
 
           if (user) {
-            allNodes.push(...[`${item.name}=${user}`, `${item.name}日期=${node.update_time.split(" ")[0]}`])
+            allNodes.push(
+              ...[
+                `${item.name}=${user}`,
+                `${item.name}日期=${node.update_time.split(" ")[0]}`,
+              ]
+            );
           }
         }
       }
-    })
+    });
 
     // 获取所有的审核节点
     // const approveData = allData.filter(item => item.node_type == '2')
@@ -85,14 +89,15 @@ export default class Sdk {
     // const latestDate = date[date.length - 1].date;
     // const approvalNodeInfo = [`${review.name}=${users}`, `${review.name}时间=${latestDate}`];
 
-    const affectFileTab = await change.getTabByApicode({
-      apicode: "AffectFiles",
+    const affectPartsTab = await change.getTabByApicode({
+      apicode: "AffectParts",
     });
-    if (affectFileTab) {
-      const affectFiles = await affectFileTab.getTabData();
+    if (affectPartsTab) {
+      const affectFiles = await affectPartsTab.getTabData();
       // 过滤文件
       const instanceList = await this.getInstances(
-        this.filterSuffix(affectFiles)
+        // this.filterSuffix(affectFiles)
+        affectFiles
       );
       for (const instance of instanceList) {
         const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
@@ -103,12 +108,26 @@ export default class Sdk {
           fileId: instance.basicReadInstanceInfo.insId,
           fileName: instance.basicReadInstanceInfo.insDesc,
           fileUrl: this.getFileUrl(instance, urlAttr),
-          approvalNodeInfo: allNodes
+          approvalNodeInfo: allNodes,
         });
         const attachmentTab = await instance.getTabByApicode({
           apicode: "Attachments",
         });
         if (attachmentTab) {
+          // await attachmentTab
+          //   ?.insertTabDataAttachments(
+          //     [
+          //       {
+          //         name: "物料-仅物料-20230325145328",
+          //         size: 43578,
+          //         extension: "pdf",
+          //         id: "uppy-///////20230325145328/xlsx/pdf-sj9-pcp-1d-jm5-sj9-pcp-1d-1e-1e-application/pdf-43578-1687250768513",
+          //         uploadURL:
+          //           "/plm/files/35007cf0b781df3b1db8d188eabbda58+M2YxYmMzMmItOGYzMC00NmQ3LThhZGUtOGViNzU2NWY3ZmE3Ljg5MmFmNjBjLTk4ZGYtNDBjZi04YzQ3LTMxYTAxODc5NmQxMA",
+          //       },
+          //     ],
+          //     true,
+          //   )
           let attachments = (await attachmentTab.getTabData()) as Attachment[];
           attachments.forEach((attachment) => {
             const attachmentName =
@@ -119,16 +138,51 @@ export default class Sdk {
             this.initializeFileInfo(attachment, {
               fileId: attachment.rowId,
               fileName: attachmentName,
-              fileUrl: attachment.getAttrValue({ tab: attachmentTab, attrApicode: 'FileUrl' }),
+              fileUrl: attachment.getAttrValue({
+                tab: attachmentTab,
+                attrApicode: "FileUrl",
+              }),
               approvalNodeInfo: allNodes,
             });
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
               attachmentName.endsWith(suffix)
             );
           });
-          instance.attachments = attachments.filter(item => item.isTransform);
+          instance.attachments = attachments.filter((item) => item.isTransform);
         } else {
           instance.attachments = [];
+        }
+
+        const designFilesTab = await instance.getTabByApicode({
+          apicode: "DesignFiles",
+        });
+        if (designFilesTab) {
+          let designFiles = (await designFilesTab.getTabData()) as Attachment[];
+          designFiles.forEach((designFile) => {
+            const attachmentName =
+              designFile.getAttrValue({
+                tab: designFilesTab,
+                attrApicode: "FileName",
+              }) || "";
+            instance.fileName = attachmentName;
+            // this.initializeFileInfo(designFile, {
+            //   fileId: designFile.rowId,
+            //   fileName: attachmentName,
+            //   fileUrl: designFile.getAttrValue({ tab: designFilesTab, attrApicode: 'FileUrl' }),
+            //   approvalNodeInfo: allNodes,
+            // });
+            // designFile.isTransform = this.attachmentSuffix.some((suffix) =>
+            //   attachmentName.endsWith(suffix)
+            // );
+          });
+          // instance.designFiles = designFiles.filter(item => item.isTransform);
+          instance.fileUrl =
+            designFiles[0]?.getAttrValue({
+              tab: designFilesTab,
+              attrApicode: "FileUrl",
+            }) || "";
+        } else {
+          instance.fileUrl = "";
         }
       }
       return instanceList;
@@ -151,9 +205,10 @@ export default class Sdk {
       const tabFlattenDatas = utility.ArrayAttributeFlat(
         StructureData
       ) as IRowInstance[];
-      const instanceList = [instanceP, ...await this.getInstances(
-        this.filterSuffix(tabFlattenDatas)
-      )]
+      const instanceList = [
+        instanceP,
+        ...(await this.getInstances(this.filterSuffix(tabFlattenDatas))),
+      ];
 
       for (const instance of instanceList) {
         const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
@@ -179,7 +234,10 @@ export default class Sdk {
             this.initializeFileInfo(attachment, {
               fileId: attachment.rowId,
               fileName: attachmentName,
-              fileUrl: attachment.getAttrValue({ tab: attachmentTab, attrApicode: 'FileUrl' }),
+              fileUrl: attachment.getAttrValue({
+                tab: attachmentTab,
+                attrApicode: "FileUrl",
+              }),
             });
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
               attachmentName.endsWith(suffix)
@@ -258,7 +316,7 @@ export default class Sdk {
     const files = filesystem
       .filter((fsy) => fsy.attachments?.length)
       .map((fsy) => {
-        console.log('附件', fsy.attachments)
+        console.log("附件", fsy.attachments);
         return {
           fileInsId: fsy.data.fileId,
           attachments: fsy.attachments!.map((att) => {
@@ -292,7 +350,7 @@ export default class Sdk {
   //   //   //  BOMData.forEach(item => {
   //   //   //   item.nu
   //   //   //   item.ins
-  //   //   //   item.      
+  //   //   //   item.
   //   //   //  })
   //   // }
   // }

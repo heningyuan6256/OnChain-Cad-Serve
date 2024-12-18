@@ -28,7 +28,8 @@ export class Filesystem<T extends FileSelf | Attachment> {
       localAddress: this.localAddress,
     });
     if (this.isFileSelf()) {
-      this.filename = this.data.basicReadInstanceInfo.insDesc;
+      // this.filename = this.data.basicReadInstanceInfo.insDesc;
+      this.filename = (this.data as Attachment).fileName;
       this.attachments = this.data.attachments.map((att) => {
         return new Filesystem(common, att, this);
       });
@@ -99,6 +100,9 @@ export class Filesystem<T extends FileSelf | Attachment> {
   static async generate(common: CommonUtils, data: FileSelf[]) {
     const files: Filesystem<FileSelf>[] = [];
     for (const item of data) {
+      if(!item.fileUrl) {
+        return files;
+      };
       const file = new Filesystem(common, item);
       files.push(file);
       await mkdir(file.localAddress, { recursive: true });
