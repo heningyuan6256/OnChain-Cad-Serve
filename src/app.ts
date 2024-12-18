@@ -41,6 +41,7 @@ export async function downloadDraw(params: TransformArgument) {
     if (await exists("./transform.zip")) {
       await rm("./transform.zip", { force: true });
     }
+    // TODO 塞一条正在转换的记录
     const data = await sdk.getStructureTab(params.insId);
     const downloader = new Downloader(data, sdk.common);
     await downloader.runDownloadDraw();

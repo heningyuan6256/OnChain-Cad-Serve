@@ -2,9 +2,11 @@
 //@ts-ignore
 import { Producer, Consumer, logLevel } from 'onchain-pulsar'
 import { BasicEnv } from '../../env';
+import { sleep } from 'bun';
+import { downloadDraw } from '../app';
 
 const producer = new Producer({
-    topic: "persistent://public/default/my-topic",
+    topic: "persistent://719/dev/instance-released",
     discoveryServers: [BasicEnv.pulsarURL],
     jwt: process.env.JWT_TOKEN,
     producerAccessMode: Producer.ACCESS_MODES.SHARED,
@@ -12,7 +14,7 @@ const producer = new Producer({
 })
 
 const consumer = new Consumer({
-    topic: "persistent://public/default/my-topic",
+    topic: "persistent://719/dev/instance-released",
     subscription: "my-subscription",
     discoveryServers: [BasicEnv.pulsarURL],
     jwt: process.env.JWT_TOKEN,
@@ -31,12 +33,8 @@ export const sendPulsarMessage = async () => {
         messages: [
             {
                 properties: { pulsar: "flex" },
-                payload: 'Ayeo'
+                payload: `{"type":"downloadDraw","insId":"1866460881178718210"}`
             },
-            {
-                properties: { pulsar: "flex" },
-                payload: 'Ayeo1'
-            }
         ]
     });
 }
@@ -49,19 +47,27 @@ export const receivePulsarMessage = async () => {
     await consumer.subscribe();
 
     consumer.onStateChange(({ previousState, newState }: any) => {
-        console.log(`Consumer state has changed from ${previousState} to ${newState}.`);
+        console.log(`当前消费者状态发生变化 ${previousState} to ${newState}.`);
     }
     )
 
     await consumer.run({
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
-            await ack(); // Default is individual ack
-            // await ack({type: Consumer.ACK_TYPES.CUMULATIVE});
-            console.log({
-                message,
-                properties,
-                redeliveryCount,
-            })
+            const publishedInstances = JSON.parse(message.toString("UTF-8"))
+            const token = publishedInstances.token
+            const routing = publishedInstances.routing
+            const tenantId = publishedInstances.tenantId
+            if (publishedInstances.type === 'downloadDraw') {
+                await downloadDraw({
+                    token, tenantId,
+                    insId: publishedInstances.reqData.insId,
+                    userId: ''
+                })
+            } else if (publishedInstances.type === 'transformDraw') {
+
+            }
+            // await ack(); // Default is individual ack
+
         }, autoAck: false, // specify true in order to use automaticAck
     });
 }
