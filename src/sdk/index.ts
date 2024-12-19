@@ -192,71 +192,97 @@ export default class Sdk {
   }
 
   /**
-   * 获取结构数据
+   * 获取结构数据，把根实例下所有附件信息写到外层，并处理isTransform
    */
   async getStructureTab(insId: string) {
-    const instanceP = (await this.common.getInstanceById(insId)) as FileSelf;
-    const tab = await instanceP.getTabByApicode({
+    /** 根实例 */
+    const rootInstance = (await this.common.getInstanceById(insId)) as FileSelf;
+    /** 根实例的BOM页签 */
+    const rootTabBom = await rootInstance.getTabByApicode({
       apicode: "BOM",
     });
-
-    const designTab = await instanceP.getTabByApicode({
+    /** 根实例的设计文件页签 */
+    const rootTabDesign = await rootInstance.getTabByApicode({
       apicode: "DesignFiles",
     });
 
-    if (tab && designTab) {
-      const StructureData = await tab.getTabData();
-      const tabFlattenDatas = utility.ArrayAttributeFlat(
+    if (rootTabBom && rootTabDesign) {
+      /** 根实例BOM页签根的实例数据 */
+      const StructureData = await rootTabBom.getTabData();
+      /** 根实例BOM页签平铺后的实例数据 */
+      const rootTabBomFlattenDatas = utility.ArrayAttributeFlat(
         StructureData
       ) as IRowInstance[];
+      /** 根+BOM平铺后所有的实例数据 */
       const instanceList = [
-        instanceP,
-        ...(await this.getInstances(this.filterSuffix(tabFlattenDatas))),
+        rootInstance,
+        ...(await this.getInstances(rootTabBomFlattenDatas)),
       ];
 
+      /** 根实例设计文件的FileUrl的属性对象 */
+      const rootDesignAttrFileUrl: BasicsAttribute | undefined =
+        utility.getAttrOf(rootTabDesign.attrs, "FileUrl");
+      /** 根实例设计文件的FileName的属性对象 */
+      const rootDesignAttrFileName: BasicsAttribute | undefined =
+        utility.getAttrOf(rootTabDesign.attrs, "FileName");
+
       for (const instance of instanceList) {
-        const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
-          designTab,
-          "FileUrl"
-        );
-        const FileNameAttr: BasicsAttribute | undefined = utility.getAttrOf(
-          designTab,
-          "FileName"
-        );
+        /** 设计文件的文件名 */
+        const instanceFileName =
+          instance.basicReadInstanceInfo.attributes[rootDesignAttrFileName!.id];
+        if (!instanceFileName || instanceFileName == "") {
+          console.log("设计文件无数据,index=", instanceList.indexOf(instance));
+          continue;
+        }
+
+        //把平铺后的设计文件信息写入实例最外层
         this.initializeFileInfo(instance, {
           fileId: instance.basicReadInstanceInfo.insId,
-          fileName: instance.basicReadInstanceInfo.attributes[FileNameAttr!.id],
-          fileUrl: this.getFileUrl(instance, urlAttr),
+          fileName: instanceFileName,
+          fileUrl: this.getFileUrl(instance, rootDesignAttrFileUrl),
         });
+
+        /** 平铺后单个实例的附件页签 */
         const attachmentTab = await instance.getTabByApicode({
           apicode: "Attachments",
         });
         if (attachmentTab) {
+          /** 平铺后单个实例的附件页签的数据 */
           let attachments = (await attachmentTab.getTabData()) as Attachment[];
-          attachments.forEach((attachment) => {
-            const attachmentName =
+          for (const attachment of attachments) {
+            const attachmentFileName =
               attachment.getAttrValue({
                 tab: attachmentTab,
                 attrApicode: "FileName",
               }) || "";
-            this.initializeFileInfo(attachment, {
-              fileId: attachment.rowId,
-              fileName: attachmentName,
-              fileUrl: attachment.getAttrValue({
+            if (!attachmentFileName || attachmentFileName == "") {
+              console.log(
+                "附件页签无文件数据,index=",
+                instanceList.indexOf(instance)
+              );
+              continue;
+            }
+            const attachmentFileUrl =
+              attachment.getAttrValue({
                 tab: attachmentTab,
                 attrApicode: "FileUrl",
-              }),
+              }) || "";
+            //把每个附件的文件信息写入外层
+            this.initializeFileInfo(attachment, {
+              fileId: attachment.rowId,
+              fileName: attachmentFileName,
+              fileUrl: attachmentFileUrl,
             });
+            /** 处理是否为能转换的文件类型 */
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
-              attachmentName.endsWith(suffix)
+              attachmentFileName.toUpperCase().endsWith(suffix)
             );
-          });
+          }
           instance.attachments = attachments;
         } else {
           instance.attachments = [];
         }
       }
-
       return instanceList;
     } else {
       return [];
@@ -304,6 +330,7 @@ export default class Sdk {
     instance: IBaseInstance | IRowInstance,
     info: Partial<FileInfo>
   ) {
+    console.log("设计文件/附件的文件数据=", info);
     Object.assign(instance, info);
   }
 

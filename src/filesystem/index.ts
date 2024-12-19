@@ -5,7 +5,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { FileUploadInfo } from "../uploader/type";
 
 export class Filesystem<T extends FileSelf | Attachment> {
-  static downloadAddress = './transform'
+  static downloadAddress = "./transform";
   type = "application/octet-stream";
   dimension: "original" | "modify" | "new" = "original";
   data: T;
@@ -66,9 +66,12 @@ export class Filesystem<T extends FileSelf | Attachment> {
     return `${this.localAddress}/${this.filename}`;
   }
 
-  saveAddressWithDateAndVersion(instanceVersion:string,publishTime:string) {
-    const insVersion = instanceVersion === "Draft" ? "草稿" : instanceVersion.split(" ")[0];
-    return `${this.localAddress}/${this.filename.split(".")[0]}-${insVersion}${publishTime ? `-${publishTime}` : ""}.${this.filename.split(".")[1]}`;
+  saveAddressWithDateAndVersion(instanceVersion: string, publishTime: string) {
+    const insVersion =
+      instanceVersion === "Draft" ? "草稿" : instanceVersion.split(" ")[0];
+    return `${this.localAddress}/${this.filename.split(".")[0]}-${insVersion}${
+      publishTime ? `-${publishTime}` : ""
+    }.${this.filename.split(".")[1]}`;
   }
 
   private formatUrl(url: string) {
@@ -76,7 +79,9 @@ export class Filesystem<T extends FileSelf | Attachment> {
   }
 
   /** 转为文件信息 */
-  static async toFile(fsy: Filesystem<FileSelf | Attachment>): Promise<FileUploadInfo> {
+  static async toFile(
+    fsy: Filesystem<FileSelf | Attachment>
+  ): Promise<FileUploadInfo> {
     const fileBuffer = await readFile(fsy.saveAddress);
     return {
       source: "file input",
@@ -100,9 +105,9 @@ export class Filesystem<T extends FileSelf | Attachment> {
   static async generate(common: CommonUtils, data: FileSelf[]) {
     const files: Filesystem<FileSelf>[] = [];
     for (const item of data) {
-      if(!item.fileUrl) {
-        return files;
-      };
+      if (!item.fileUrl) {
+        continue;
+      }
       const file = new Filesystem(common, item);
       files.push(file);
       await mkdir(file.localAddress, { recursive: true });

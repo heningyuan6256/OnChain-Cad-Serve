@@ -48,10 +48,14 @@ export default class Convertor {
     const updateNameList = []
     for (const fsy of this.filesystem) {
       const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${fsy.data.basicReadInstanceInfo.publishTime ? "-" + fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''}`
+      // console.log('updateName=', updateName);
       updateNameList.push(`${fsy.filename.split(".")[0]}=${updateName}`)
+      // updateNameList.push(`${updateName}`)
     }
     const fsy = this.filesystem[0]
     const fsyPath = this.getFileAddress(fsy);
+    console.log('fsyPath=', fsyPath);
+    console.log('updateNameList=', updateNameList);
     const execute = [
       "./OnChainSW_Extension.exe",
       "-rename",
