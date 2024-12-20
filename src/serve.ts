@@ -1,20 +1,27 @@
 import { downloadDraw, transform, transformOstep, transformstep } from "./app";
 import { SingleQueue } from "./queue";
-import './mod';
+import "./mod";
 //@ts-ignore
-import { Consumer, logLevel } from 'onchain-pulsar'
-import { readFileSync } from 'fs'
+import { Consumer, logLevel } from "onchain-pulsar";
+import { readFileSync } from "fs";
 import { BasicEnv } from "../env";
 import { receivePulsarMessage, sendPulsarMessage } from "./utils/pulsar";
 
 // sendPulsarMessage()
-receivePulsarMessage().catch(console.error)
+// receivePulsarMessage().catch(console.error);
 
-// downloadDraw({
-//     token: '', tenantId: '719',
-//     insId: "1866460881178718210",
-//     userId: '1866278394168709121'
-// })
+/**
+ * TODO
+ * http://192.168.0.62:8017/front/product/1866744968481206273/product-data/instance/1869577821047754754/Attachments
+ * 物料编号为P000490
+ */
+downloadDraw({
+  token:
+    "Bearer eyJhbGciOiJIUzI1NiIsImtpZCI6InNpbTIifQ.eyJhdWQiOiJodHRwOi8vd3d3Lm9uY2hhaW5wbG0uY29tIiwiZXhwIjoxNzM0NTE0NzUzLCJpc3MiOiJodHRwczovL29uY2hhaW4tZ3cuaW8iLCJqdGkiOiIxMDQiLCJuYW1lIjoi5b6Q6IOcIiwib3JnY29kZSI6IjcxOSIsInN1YiI6IjE4NjY3NDQ2MzI5Nzg4MjkzMTMiLCJ1c2VyaWQiOiIxODY2NzQ0NjMyOTc4ODI5MzEzIiwidXNlcm5hbWUiOiI1NDI1MjQ4MzBAcXEuY29tIn0.RfD5nwYvbm5O9LhP0-e_yphO6VPpOA9LANSqk6y1Cck",
+  tenantId: "719",
+  insId: "1869577821047754754",
+  userId: "1866744632978829313",
+});
 
 // Bun.serve({
 //   port: 3000,
@@ -96,5 +103,3 @@ receivePulsarMessage().catch(console.error)
 //     return new Response("404!");
 //   },
 // });
-
-

@@ -18,7 +18,7 @@ export default class Sdk {
   attachmentSuffix = [".slddrw", ".SLDDRW", ".pdf", ".PDF"];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: "http://192.168.0.61:8017/api/plm",
+      baseUrl: "http://192.168.0.62:8017/api/plm",
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
@@ -334,7 +334,7 @@ export default class Sdk {
     Object.assign(instance, info);
   }
 
-  async updateFile(filesystem: Filesystem<FileSelf>[]) {
+  async updateFile(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
     for (const fsy of filesystem) {
       if (fsy.data.uploadURL) {
         await fsy.data.updateInstanceWithOutAuth({
@@ -343,18 +343,28 @@ export default class Sdk {
       }
     }
     const modifyFile = new ModifyFile(filesystem[0].manage);
-    const files = this.uploadAttachment(filesystem);
+    console.log('filesystem[0].attachments---------', filesystem[0].attachments?.length);
+    /**
+     * TODO
+     * 就是这里之后不知道怎么处理
+     * attachments是不包含刚生成的zip数据的。
+     * 还是说，最外层不应该在根实例的FS去saveAddressCustom？而是要找到附件里刚生成的占位的图纸数据处理？？？
+     */
+    return;
+    const files = this.uploadAttachment(filesystem, drawRowId);
+    console.log('files---------', files);
     return await modifyFile.modifyAttachments(files);
   }
 
-  private uploadAttachment(filesystem: Filesystem<FileSelf>[]) {
+  private uploadAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
     const files = filesystem
       .filter((fsy) => fsy.attachments?.length)
       .map((fsy) => {
-        console.log("附件", fsy.attachments);
+        console.log("附件length", fsy.attachments?.length);
         return {
           fileInsId: fsy.data.fileId,
-          attachments: fsy.attachments!.map((att) => {
+          attachments: fsy.attachments!.map((att, attIndex) => {
+            console.log('===============', attIndex, att.data.fileId);
             return {
               rowId: att.data.fileId,
               url: att.data.uploadURL! || att.data.fileUrl,

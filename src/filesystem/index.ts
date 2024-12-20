@@ -14,6 +14,8 @@ export class Filesystem<T extends FileSelf | Attachment> {
   parent?: Filesystem<FileSelf>;
   localAddress: string;
   attachments?: Filesystem<Attachment>[];
+  drawingRowId?: string;
+  saveAddressCustom?: string;
   constructor(common: CommonUtils, data: T, parent?: Filesystem<FileSelf>) {
     this.data = data;
     this.parent = parent;
@@ -39,7 +41,8 @@ export class Filesystem<T extends FileSelf | Attachment> {
   }
 
   /** 读取文件 */
-  async readFile() {
+  async readFile(drawingId?: string) {
+    console.log("进入了readFile");
     const data = {
       file: await Filesystem.toFile(this),
       filesystem: this as Filesystem<FileSelf>,
@@ -48,9 +51,17 @@ export class Filesystem<T extends FileSelf | Attachment> {
         filesystem: Filesystem<Attachment>;
       }[],
     };
+    if (drawingId) {
+      //如果是上传图纸zip的操作，则不处理后续附件页签信息
+      console.log('读取文件，这是图纸操作，不读取后续附件页签数据，drawingId：', drawingId);
+      return data;
+    }
+    console.log('readFile:this.attachments.length==', this.attachments?.length);
     for (const att of this.attachments || []) {
+      const attFile = await Filesystem.toFile(att);
+      console.log('readFile:attFile==', this.attachments?.indexOf(att), attFile);
       data.attachments.push({
-        file: await Filesystem.toFile(att),
+        file: attFile,
         filesystem: att,
       });
     }
@@ -69,9 +80,8 @@ export class Filesystem<T extends FileSelf | Attachment> {
   saveAddressWithDateAndVersion(instanceVersion: string, publishTime: string) {
     const insVersion =
       instanceVersion === "Draft" ? "草稿" : instanceVersion.split(" ")[0];
-    return `${this.localAddress}/${this.filename.split(".")[0]}-${insVersion}${
-      publishTime ? `-${publishTime}` : ""
-    }.${this.filename.split(".")[1]}`;
+    return `${this.localAddress}/${this.filename.split(".")[0]}-${insVersion}${publishTime ? `-${publishTime}` : ""
+      }.${this.filename.split(".")[1]}`;
   }
 
   private formatUrl(url: string) {
@@ -82,7 +92,9 @@ export class Filesystem<T extends FileSelf | Attachment> {
   static async toFile(
     fsy: Filesystem<FileSelf | Attachment>
   ): Promise<FileUploadInfo> {
-    const fileBuffer = await readFile(fsy.saveAddress);
+    console.log("toFile111", fsy.saveAddressCustom || fsy.saveAddress);
+    const fileBuffer = await readFile(fsy.saveAddressCustom || fsy.saveAddress);
+    console.log("toFile222");
     return {
       source: "file input",
       name: fsy.filename,

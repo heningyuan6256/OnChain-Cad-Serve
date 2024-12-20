@@ -4,6 +4,9 @@ import Convertor from "./convertor";
 import Uploader from "./uploader";
 import { compressFolder } from "./utils/compress";
 import { exists, rm } from "node:fs/promises";
+import { Attachment } from "./sdk/types";
+import { AttachmentTransferStatus } from "onchain-sdk";
+import moment from "moment";
 
 export async function transform(params: TransformArgument) {
   try {
@@ -33,7 +36,12 @@ export async function transform(params: TransformArgument) {
   }
 }
 
+
 export async function downloadDraw(params: TransformArgument) {
+  /**图纸附件的FileId */
+  const nowTime = moment().format('YYYYMMDDHHmmssSSS');
+
+  const drawingId = `drawingId-${nowTime}`;
   try {
     globalThis.lock = true;
     const sdk = new Sdk(params);
@@ -44,18 +52,113 @@ export async function downloadDraw(params: TransformArgument) {
     /** 获取结构数据，把根实例下所有附件信息写到外层，并处理isTransform */
     const data = await sdk.getStructureTab(params.insId);
     console.log("data==", data.length);
+    /** 根实例 */
+    const rootInstance = data[0];
+    // console.log('BasicAttrs===', JSON.stringify(rootInstance));
     /** 根实例的附件页签 */
-    const rootInsAttachTab = await data[0].getTabByApicode({
+    const rootInsAttachTab = await rootInstance.getTabByApicode({
       apicode: "Attachments",
     });
-    // console.log("rootInsAttachTab===", JSON.stringify(rootInsAttachTab));
+    // console.log("rootInsAttachTab===", rootInsAttachTab);
     if (rootInsAttachTab) {
+      /** 根实例的附件页签数据 */
+      // const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      // /** 根实例是否图纸转换过：根实例的附件如果包含文件ID为drawingId，就是代表转换过 */
+      // const hasTransform = rootAttachDatas.some((rootAttachData) => {
+      //   const fileid = rootAttachData.getAttrValue({
+      //     tab: rootInsAttachTab,
+      //     attrApicode: "FileId",
+      //   });
+      //   return fileid == drawingId;
+      // })
+      // if (hasTransform) {
+      //   console.log('此实例已存在图纸数据，结束处理');
+      //   return;
+      // }
+      await rootInsAttachTab.insertTabDataAttachments({
+        attachmentRows: [
+          {
+            // name: `图纸`,
+            name: `图纸-${nowTime}`,
+            size: 0,
+            extension: "zip",
+            id: drawingId,
+            uploadURL: "drawingUrl",
+          },
+        ],
+        isCheckin: false,
+        transferStatus: AttachmentTransferStatus.TransferProcessing,
+        onSuccess(msg) {
+          console.log("上传成功==", msg);
+        },
+      });
+
       const downloader = new Downloader(data, sdk.common);
+      console.log("开始下载");
       await downloader.runDownloadDraw();
+      console.log("下载结束");
       const filesystem = await downloader.filesystem;
-      const convertor = new Convertor(filesystem);
-      await convertor.updateName();
+      //TODO 文件转换处理
+      // const convertor = new Convertor(filesystem);
+      // console.log("转换");
+      // await convertor.updateName();
       await compressFolder("./transform");
+
+      if (filesystem.length == 0) {
+        console.log('待处理的转换FS为空');
+        return;
+      }
+      /** 根实例的FS */
+      const rootFilesystem = filesystem[0];
+      console.log('rootFilesystem.manage.localAddress---', rootFilesystem.manage.localAddress);
+      // const rootInstanceId = rootInstance.basicReadInstanceInfo.insId;
+
+      rootFilesystem.attachments
+      //把转换文件zip放到根去做上传
+      rootFilesystem.saveAddressCustom = "./transform.zip";
+      rootFilesystem.filename = "transform.zip"
+      rootFilesystem.dimension = 'modify'
+      const uploader = new Uploader([rootFilesystem], sdk.common);
+      console.log("上传");
+      await uploader.run(drawingId);
+
+      console.log('上传zip完成，uploadURL=', rootFilesystem.data.uploadURL);
+
+      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      const fileids = rootAttachDatas.map(item => item.getAttrValue({
+        tab: rootInsAttachTab,
+        attrApicode: "FileId",
+      }))
+      console.log('rootInsAttachTab==', rootAttachDatas.length, fileids, drawingId);
+
+      /** 此次流程生成图纸的行数据 */
+      const drawRowData = rootAttachDatas.find(item => {
+        const fileid = item.getAttrValue({
+          tab: rootInsAttachTab,
+          attrApicode: "FileId",
+        })
+        return fileid == drawingId;
+      })
+
+      if (drawRowData == null) {
+        //如果没找到此次流程生成图纸的行数据，则中断后续处理
+        console.log('没找到此次流程生成图纸的行数据，中断后续处理');
+        return;
+      }
+
+      console.log('drawRowId===', drawRowData.rowId);
+
+      console.log("更新");
+      /**
+       * TODO
+       * 在这里迷了。上传后再查页签数据的数量是最新的，是包含刚上传的zip的，
+       * 但这里rootFilesystem处理上传图纸的附件页签数据，还是旧的，会比最新的少一条刚上传的zip。
+       * 这里拿到了此次流程生成的rowId   drawRowData.rowId
+       * 再后面的修改就不知道怎么处理了
+       */
+      await sdk.updateFile([rootFilesystem], drawRowData.rowId);
+      return
+
       await downloader.remove();
     }
   } catch (error) { }
