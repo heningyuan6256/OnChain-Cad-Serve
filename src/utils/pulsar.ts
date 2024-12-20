@@ -3,7 +3,7 @@
 import { Producer, Consumer, logLevel } from 'onchain-pulsar'
 import { BasicEnv } from '../../env';
 import { sleep } from 'bun';
-import { downloadDraw } from '../app';
+import { downloadDraw, transform } from '../app';
 
 const producer = new Producer({
     topic: "persistent://719/dev/instance-released",
@@ -63,8 +63,13 @@ export const receivePulsarMessage = async () => {
                     insId: publishedInstances.reqData.insId,
                     userId: ''
                 })
-            } else if (publishedInstances.type === 'transformDraw') {
-
+            } else if (publishedInstances.data.type === 'transformDraw') {
+                console.log(publishedInstances)
+                await transform({
+                    insId: publishedInstances.data.resData.changeInsId,
+                    tenantId: publishedInstances.tenantId,
+                    userId: publishedInstances.data.userId
+                })
             }
             // await ack(); // Default is individual ack
 

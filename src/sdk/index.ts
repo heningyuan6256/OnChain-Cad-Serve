@@ -18,7 +18,7 @@ export default class Sdk {
   attachmentSuffix = [".slddrw", ".SLDDRW", ".pdf", ".PDF"];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: "http://192.168.0.62:8017/api/plm",
+      baseUrl: "http://192.168.0.61:8017/api/plm",
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
@@ -28,12 +28,12 @@ export default class Sdk {
   }
 
   async getAffectFiles(insId: string) {
-    const change = await this.common.getInstanceById<IChangeInstance>(insId);
+    const change = await this.common.getInstanceById<IChangeInstance>(insId)
     await change.getWorkflow()
     // const review = change.basicReadInstanceInfo.workflowNodes.find(
     //   (node) => node.apicode == "Review"
     // )!;
-    const { allData, usersData } = await change.getWorkflowApprovalRecord();
+    const { allData, usersData } = await change.getWorkflowApprovalRecord()
 
     // 获取审批通过的对象
     const approved = allData.filter(

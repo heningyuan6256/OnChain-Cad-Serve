@@ -9,9 +9,9 @@ export async function transform(params: TransformArgument) {
   try {
     globalThis.lock = true;
     console.log(params, "params");
-    params.insId = params.resData.id;
-    params.tenantId = params.resData.tenantId;
-    params.userId = params.resData.createBy;
+    params.insId = params.insId;
+    params.tenantId = params.tenantId;
+    params.userId = params.userId;
     const sdk = new Sdk(params);
     const data = await sdk.getAffectFiles(params.insId);
     const downloader = new Downloader(data, sdk.common);

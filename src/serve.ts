@@ -10,11 +10,11 @@ import { receivePulsarMessage, sendPulsarMessage } from "./utils/pulsar";
 // sendPulsarMessage()
 receivePulsarMessage().catch(console.error)
 
-downloadDraw({
-    token: '', tenantId: '719',
-    insId: "1866460881178718210",
-    userId: '1866278394168709121'
-})
+// downloadDraw({
+//     token: '', tenantId: '719',
+//     insId: "1866460881178718210",
+//     userId: '1866278394168709121'
+// })
 
 // Bun.serve({
 //   port: 3000,
