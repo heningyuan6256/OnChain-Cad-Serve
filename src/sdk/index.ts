@@ -28,17 +28,15 @@ export default class Sdk {
   }
 
   async getAffectFiles(insId: string) {
-    const change = await this.common.getInstanceById<IChangeInstance>(insId)
-    await change.getWorkflow()
+    const change = await this.common.getInstanceById<IChangeInstance>(insId);
+    await change.getWorkflow();
     // const review = change.basicReadInstanceInfo.workflowNodes.find(
     //   (node) => node.apicode == "Review"
     // )!;
-    const { allData, usersData } = await change.getWorkflowApprovalRecord()
+    const { allData, usersData } = await change.getWorkflowApprovalRecord();
 
     // 获取审批通过的对象
-    const approved = allData.filter(
-      (item) => item.approve_instance_id && item.action == "1"
-    );
+    const approved = allData.filter((item) => item.approve_instance_id && item.action == "1");
     const allNodes: any = [];
 
     change.basicReadInstanceInfo.workflowNodes.forEach((item) => {
@@ -46,17 +44,10 @@ export default class Sdk {
       if (item.type == "2") {
         const node = approved.find((v) => v.node_id == item.id);
         if (node) {
-          const user = usersData.find(
-            (user) => user.value == node.approve_instance_id
-          )?.label;
+          const user = usersData.find((user) => user.value == node.approve_instance_id)?.label;
 
           if (user) {
-            allNodes.push(
-              ...[
-                `${item.name}=${user}`,
-                `${item.name}日期=${node.update_time.split(" ")[0]}`,
-              ]
-            );
+            allNodes.push(...[`${item.name}=${user}`, `${item.name}日期=${node.update_time.split(" ")[0]}`]);
           }
         }
       }
@@ -100,10 +91,7 @@ export default class Sdk {
         affectFiles
       );
       for (const instance of instanceList) {
-        const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
-          instance.BasicAttrs,
-          "FileUrl"
-        );
+        const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(instance.BasicAttrs, "FileUrl");
         this.initializeFileInfo(instance, {
           fileId: instance.basicReadInstanceInfo.insId,
           fileName: instance.basicReadInstanceInfo.insDesc,
@@ -144,9 +132,7 @@ export default class Sdk {
               }),
               approvalNodeInfo: allNodes,
             });
-            attachment.isTransform = this.attachmentSuffix.some((suffix) =>
-              attachmentName.endsWith(suffix)
-            );
+            attachment.isTransform = this.attachmentSuffix.some((suffix) => attachmentName.endsWith(suffix));
           });
           instance.attachments = attachments.filter((item) => item.isTransform);
         } else {
@@ -210,26 +196,18 @@ export default class Sdk {
       /** 根实例BOM页签根的实例数据 */
       const StructureData = await rootTabBom.getTabData();
       /** 根实例BOM页签平铺后的实例数据 */
-      const rootTabBomFlattenDatas = utility.ArrayAttributeFlat(
-        StructureData
-      ) as IRowInstance[];
+      const rootTabBomFlattenDatas = utility.ArrayAttributeFlat(StructureData) as IRowInstance[];
       /** 根+BOM平铺后所有的实例数据 */
-      const instanceList = [
-        rootInstance,
-        ...(await this.getInstances(rootTabBomFlattenDatas)),
-      ];
+      const instanceList = [rootInstance, ...(await this.getInstances(rootTabBomFlattenDatas))];
 
       /** 根实例设计文件的FileUrl的属性对象 */
-      const rootDesignAttrFileUrl: BasicsAttribute | undefined =
-        utility.getAttrOf(rootTabDesign.attrs, "FileUrl");
+      const rootDesignAttrFileUrl: BasicsAttribute | undefined = utility.getAttrOf(rootTabDesign.attrs, "FileUrl");
       /** 根实例设计文件的FileName的属性对象 */
-      const rootDesignAttrFileName: BasicsAttribute | undefined =
-        utility.getAttrOf(rootTabDesign.attrs, "FileName");
+      const rootDesignAttrFileName: BasicsAttribute | undefined = utility.getAttrOf(rootTabDesign.attrs, "FileName");
 
       for (const instance of instanceList) {
         /** 设计文件的文件名 */
-        const instanceFileName =
-          instance.basicReadInstanceInfo.attributes[rootDesignAttrFileName!.id];
+        const instanceFileName = instance.basicReadInstanceInfo.attributes[rootDesignAttrFileName!.id];
         if (!instanceFileName || instanceFileName == "") {
           console.log("设计文件无数据,index=", instanceList.indexOf(instance));
           continue;
@@ -256,10 +234,7 @@ export default class Sdk {
                 attrApicode: "FileName",
               }) || "";
             if (!attachmentFileName || attachmentFileName == "") {
-              console.log(
-                "附件页签无文件数据,index=",
-                instanceList.indexOf(instance)
-              );
+              console.log("附件页签无文件数据,index=", instanceList.indexOf(instance));
               continue;
             }
             const attachmentFileUrl =
@@ -291,23 +266,15 @@ export default class Sdk {
 
   filterSuffix(data: IRowInstance[]) {
     return data.filter((row) =>
-      this.fileSuffix.some(
-        (suffix) =>
-          row.insDesc.endsWith(suffix) && !BasicsAuthority.isMosaic(row.insId)
-      )
+      this.fileSuffix.some((suffix) => row.insDesc.endsWith(suffix) && !BasicsAuthority.isMosaic(row.insId))
     );
   }
 
   getInstances(data: IRowInstance[]) {
-    return Promise.all(
-      data.map((row) => this.common.getInstanceById<FileSelf>(row.insId))
-    );
+    return Promise.all(data.map((row) => this.common.getInstanceById<FileSelf>(row.insId)));
   }
 
-  private getFileUrl(
-    instance: IBaseInstance | IRowInstance,
-    attr?: BasicsAttribute
-  ) {
+  private getFileUrl(instance: IBaseInstance | IRowInstance, attr?: BasicsAttribute) {
     let fileUrl: string = "";
     if (attr) {
       if (this.isInstance(instance)) {
@@ -326,34 +293,49 @@ export default class Sdk {
     return !!ins.basicReadInstanceInfo;
   }
 
-  private initializeFileInfo(
-    instance: IBaseInstance | IRowInstance,
-    info: Partial<FileInfo>
-  ) {
+  private initializeFileInfo(instance: IBaseInstance | IRowInstance, info: Partial<FileInfo>) {
     console.log("设计文件/附件的文件数据=", info);
     Object.assign(instance, info);
   }
 
   async updateFile(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
-    for (const fsy of filesystem) {
-      if (fsy.data.uploadURL) {
-        await fsy.data.updateInstanceWithOutAuth({
-          attrMap: { FileUrl: fsy.data.uploadURL, CanDownload: "true" },
-        });
-      }
-    }
+    // for (const fsy of filesystem) {
+    //   if (fsy.data.uploadURL) {
+    //     await fsy.data.updateInstanceWithOutAuth({
+    //       attrMap: { FileUrl: fsy.data.uploadURL, CanDownload: "true" },
+    //     });
+    //   }
+    // }
     const modifyFile = new ModifyFile(filesystem[0].manage);
-    console.log('filesystem[0].attachments---------', filesystem[0].attachments?.length);
+    console.log("filesystem[0].attachments---------", filesystem[0].attachments?.length);
     /**
      * TODO
      * 就是这里之后不知道怎么处理
      * attachments是不包含刚生成的zip数据的。
      * 还是说，最外层不应该在根实例的FS去saveAddressCustom？而是要找到附件里刚生成的占位的图纸数据处理？？？
      */
-    return;
     const files = this.uploadAttachment(filesystem, drawRowId);
-    console.log('files---------', files);
-    return await modifyFile.modifyAttachments(files);
+    return;
+
+    console.log("files---------", files);
+    // return await modifyFile.modifyAttachments(files);
+  }
+
+  /**更新下载图纸指定的附件 */
+  async updateFileAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
+    const modifyFile = new ModifyFile(filesystem[0].manage);
+    return await modifyFile.modifyAttachments([
+      {
+        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+        attachments: [
+          {
+            rowId: drawRowId || "",
+            url: filesystem[0].data.uploadURL || "",
+            mark: filesystem[0].data.uploadURL ? "true" : "failed",
+          },
+        ],
+      },
+    ]);
   }
 
   private uploadAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
@@ -364,9 +346,9 @@ export default class Sdk {
         return {
           fileInsId: fsy.data.fileId,
           attachments: fsy.attachments!.map((att, attIndex) => {
-            console.log('===============', attIndex, att.data.fileId);
+            console.log("===============", attIndex, att.data.fileId);
             return {
-              rowId: att.data.fileId,
+              rowId: drawRowId,
               url: att.data.uploadURL! || att.data.fileUrl,
               mark: att.data.uploadURL ? "true" : "failed",
             };
