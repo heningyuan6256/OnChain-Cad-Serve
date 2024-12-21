@@ -98,9 +98,9 @@ export async function downloadDraw(params: TransformArgument) {
       console.log("下载结束");
       const filesystem = await downloader.filesystem;
       //TODO 文件转换处理
-      // const convertor = new Convertor(filesystem);
-      // console.log("转换");
-      // await convertor.updateName();
+      const convertor = new Convertor(filesystem);
+      console.log("转换");
+      await convertor.updateName();
       await compressFolder("./transform");
 
       if (filesystem.length == 0) {
