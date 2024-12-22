@@ -97,7 +97,7 @@ export default class Convertor {
     console.log(execute, 'execute');
     const proc = Bun.spawn(execute);
     await proc.exited;
-    return readFileSync(fsyPath.substring(0, fsyPath.lastIndexOf(".")) + '.STEP', {})
+    return fsyPath.substring(0, fsyPath.lastIndexOf(".")) + '.STEP'
   }
 
   async transformStep() {
@@ -110,7 +110,7 @@ export default class Convertor {
     ]
     const proc = Bun.spawn(execute);
     await proc.exited;
-    return readFileSync(fsyPath.substring(0, fsyPath.lastIndexOf(".")) + '.STEP', {})
+    return fsyPath.substring(0, fsyPath.lastIndexOf(".")) + '.STEP'
   }
 
   private getFileAddress(fsy: Filesystem<any>) {

@@ -20,6 +20,6 @@
     "@std/media-types": "npm:@jsr/std__media-types",
     "adm-zip": "^0.5.16",
     "onchain-pulsar": "0.0.3",
-    "onchain-sdk": "file:.yalc/onchain-sdk"
+    "onchain-sdk": "0.1.14"
   }
 }

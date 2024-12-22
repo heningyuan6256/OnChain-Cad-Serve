@@ -78,7 +78,7 @@ export async function downloadDraw(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `图纸-${nowTime}`,
+            name: `图纸-${nowTime}.zip`,
             size: 0,
             extension: "zip",
             id: drawingId,
@@ -112,7 +112,6 @@ export async function downloadDraw(params: TransformArgument) {
       console.log("rootFilesystem.manage.localAddress---", rootFilesystem.manage.localAddress);
       // const rootInstanceId = rootInstance.basicReadInstanceInfo.insId;
 
-      rootFilesystem.attachments;
       //把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = "./transform.zip";
       rootFilesystem.filename = "transform.zip";
@@ -124,14 +123,6 @@ export async function downloadDraw(params: TransformArgument) {
       console.log("上传zip完成，uploadURL=", rootFilesystem.data.uploadURL);
 
       const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
-      const fileids = rootAttachDatas.map((item) =>
-        item.getAttrValue({
-          tab: rootInsAttachTab,
-          attrApicode: "FileId",
-        })
-      );
-      console.log("rootInsAttachTab==", rootAttachDatas.length, fileids, drawingId);
-
       /** 此次流程生成图纸的行数据 */
       const drawRowData = rootAttachDatas.find((item) => {
         const fileid = item.getAttrValue({
@@ -160,43 +151,160 @@ export async function downloadDraw(params: TransformArgument) {
       await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
       await downloader.remove();
     }
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export async function transformOstep(params: TransformArgument) {
+  /**图纸附件的FileId */
+  const nowTime = moment().format("YYYYMMDDHHmmssSSS");
+  const drawingId = `drawingId-${nowTime}`;
   let fileData;
   try {
-    globalThis.lock = true;
     const sdk = new Sdk(params);
+    if (await exists("./transform.zip")) {
+      await rm("./transform.zip", { force: true });
+    }
     const data = await sdk.getStructureTab(params.insId);
-    const downloader = new Downloader(data, sdk.common);
-    await downloader.runTransformOstep();
-    const filesystem = await downloader.filesystem;
-    const convertor = new Convertor(filesystem);
-    fileData = await convertor.transformOStep();
-    await downloader.remove();
-    globalThis.lock = false;
+    /** 根实例 */
+    const rootInstance = data[0];
+    const rootInsAttachTab = await rootInstance.getTabByApicode({
+      apicode: "Attachments",
+    });
+    if (rootInsAttachTab) {
+      await rootInsAttachTab.insertTabDataAttachments({
+        attachmentRows: [
+          {
+            // name: `图纸`,
+            name: `外壳-${nowTime}.STEP`,
+            size: 0,
+            extension: "STEP",
+            id: drawingId,
+            uploadURL: "drawingUrl",
+          },
+        ],
+        isCheckin: false,
+        transferStatus: AttachmentTransferStatus.TransferProcessing,
+        onSuccess(msg) {
+          console.log("上传成功==", msg);
+        },
+      });
+      const downloader = new Downloader(data, sdk.common);
+      await downloader.runDownloadDraw();
+      const filesystem = await downloader.filesystem;
+      const convertor = new Convertor(filesystem);
+      let filePath = await convertor.transformOStep();
+      if (filesystem.length == 0) {
+        console.log("待处理的转换FS为空");
+        return;
+      }
+      /** 根实例的FS */
+      const rootFilesystem = filesystem[0];
+      //F把转换文件zip放到根去做上传
+      rootFilesystem.saveAddressCustom = filePath;
+      rootFilesystem.filename = `外壳-${nowTime}.STEP`;
+      rootFilesystem.dimension = "modify";
+      const uploader = new Uploader([rootFilesystem], sdk.common);
+      console.log("上传");
+      await uploader.run(drawingId);
+      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      rootAttachDatas.map((item) =>
+        item.getAttrValue({
+          tab: rootInsAttachTab,
+          attrApicode: "FileId",
+        })
+      );
+      const drawRowData = rootAttachDatas.find((item) => {
+        const fileid = item.getAttrValue({
+          tab: rootInsAttachTab,
+          attrApicode: "FileId",
+        });
+        return fileid == drawingId;
+      });
+      if (drawRowData == null) {
+        //如果没找到此次流程生成图纸的行数据，则中断后续处理
+        console.log("没找到此次流程生成图纸的行数据，中断后续处理");
+        return;
+      }
+      await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
+      await downloader.remove();
+    }
   } catch (error) {
-    globalThis.lock = false;
   }
-  return fileData;
 }
 
 export async function transformstep(params: TransformArgument) {
-  let fileData;
+  /**图纸附件的FileId */
+  const nowTime = moment().format("YYYYMMDDHHmmssSSS");
+  const drawingId = `drawingId-${nowTime}`;
   try {
-    globalThis.lock = true;
     const sdk = new Sdk(params);
+    if (await exists("./transform.zip")) {
+      await rm("./transform.zip", { force: true });
+    }
     const data = await sdk.getStructureTab(params.insId);
-    const downloader = new Downloader(data, sdk.common);
-    await downloader.runTransformOstep();
-    const filesystem = await downloader.filesystem;
-    const convertor = new Convertor(filesystem);
-    fileData = await convertor.transformStep();
-    await downloader.remove();
-    globalThis.lock = false;
+    /** 根实例 */
+    const rootInstance = data[0];
+    const rootInsAttachTab = await rootInstance.getTabByApicode({
+      apicode: "Attachments",
+    });
+    if (rootInsAttachTab) {
+      await rootInsAttachTab.insertTabDataAttachments({
+        attachmentRows: [
+          {
+            // name: `图纸`,
+            name: `${nowTime}.STEP`,
+            size: 0,
+            extension: "STEP",
+            id: drawingId,
+            uploadURL: "drawingUrl",
+          },
+        ],
+        isCheckin: false,
+        transferStatus: AttachmentTransferStatus.TransferProcessing,
+        onSuccess(msg) {
+          console.log("上传成功==", msg);
+        },
+      });
+      const downloader = new Downloader(data, sdk.common);
+      await downloader.runDownloadDraw();
+      const filesystem = await downloader.filesystem;
+      const convertor = new Convertor(filesystem);
+      let filePath = await convertor.transformStep();
+      if (filesystem.length == 0) {
+        console.log("待处理的转换FS为空");
+        return;
+      }
+      /** 根实例的FS */
+      const rootFilesystem = filesystem[0];
+      //F把转换文件zip放到根去做上传
+      rootFilesystem.saveAddressCustom = filePath;
+      rootFilesystem.filename = `${nowTime}.STEP`;
+      rootFilesystem.dimension = "modify";
+      const uploader = new Uploader([rootFilesystem], sdk.common);
+      console.log("上传");
+      await uploader.run(drawingId);
+      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      rootAttachDatas.map((item) =>
+        item.getAttrValue({
+          tab: rootInsAttachTab,
+          attrApicode: "FileId",
+        })
+      );
+      const drawRowData = rootAttachDatas.find((item) => {
+        const fileid = item.getAttrValue({
+          tab: rootInsAttachTab,
+          attrApicode: "FileId",
+        });
+        return fileid == drawingId;
+      });
+      if (drawRowData == null) {
+        //如果没找到此次流程生成图纸的行数据，则中断后续处理
+        console.log("没找到此次流程生成图纸的行数据，中断后续处理");
+        return;
+      }
+      await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
+      await downloader.remove();
+    }
   } catch (error) {
-    globalThis.lock = false;
   }
-  return fileData;
 }

@@ -3,7 +3,7 @@
 import { Producer, Consumer, logLevel } from 'onchain-pulsar'
 import { BasicEnv } from '../../env';
 import { sleep } from 'bun';
-import { downloadDraw, transform } from '../app';
+import { downloadDraw, transform, transformOstep, transformstep } from '../app';
 
 const producer = new Producer({
     topic: "persistent://719/dev/instance-released",
@@ -59,10 +59,10 @@ export const receivePulsarMessage = async () => {
             const tenantId = publishedInstances.tenantId
             if (publishedInstances.type === 'downloadDraw') {
                 await downloadDraw({
-                    token, tenantId,
+                    tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
-                    userId: ''
-                })
+                    userId: "1866744632978829313",
+                  });
             } else if (publishedInstances.data.type === 'transformDraw') {
                 console.log(publishedInstances)
                 await transform({
@@ -70,6 +70,18 @@ export const receivePulsarMessage = async () => {
                     tenantId: publishedInstances.tenantId,
                     userId: publishedInstances.data.userId
                 })
+            } else if(publishedInstances.data.type=='transformOStep'){
+                await transformOstep({
+                    tenantId: tenantId,
+                    insId: publishedInstances.reqData.insId,
+                    userId: "1866744632978829313",
+                  });
+            } else if(publishedInstances.data.type=='transformOStep'){
+                await transformstep({
+                    tenantId: tenantId,
+                    insId: publishedInstances.reqData.insId,
+                    userId: "1866744632978829313",
+                  });
             }
             // await ack(); // Default is individual ack
 
