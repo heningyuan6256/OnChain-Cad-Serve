@@ -3,6 +3,7 @@ interface SdkBasicInfo {
   tenantId: string;
   token?: string;
   resData?:any
+  address?: string
 }
 
 interface TransformArgument extends SdkBasicInfo {

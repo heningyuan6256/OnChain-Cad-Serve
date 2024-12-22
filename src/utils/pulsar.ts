@@ -59,28 +59,31 @@ export const receivePulsarMessage = async () => {
             const tenantId = publishedInstances.tenantId
             if (publishedInstances.type === 'downloadDraw') {
                 await downloadDraw({
-                    tenantId: tenantId,
+                    tenantId: publishedInstances.tenantId,
                     insId: publishedInstances.reqData.insId,
-                    userId: "1866744632978829313",
+                    userId: publishedInstances.data.userId,
+                    address: publishedInstances.reqData.address
                   });
             } else if (publishedInstances.data.type === 'transformDraw') {
-                console.log(publishedInstances)
                 await transform({
                     insId: publishedInstances.data.resData.changeInsId,
                     tenantId: publishedInstances.tenantId,
-                    userId: publishedInstances.data.userId
+                    userId: publishedInstances.data.userId,
+                    address: publishedInstances.reqData.address
                 })
             } else if(publishedInstances.data.type=='transformOStep'){
                 await transformOstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
-                    userId: "1866744632978829313",
+                    userId: publishedInstances.data.userId,
+                    address: publishedInstances.reqData.address
                   });
-            } else if(publishedInstances.data.type=='transformOStep'){
+            } else if(publishedInstances.data.type=='transformStep'){
                 await transformstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
-                    userId: "1866744632978829313",
+                    address: publishedInstances.reqData.address,
+                    userId: publishedInstances.data.userId,
                   });
             }
             // await ack(); // Default is individual ack

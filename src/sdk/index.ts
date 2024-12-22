@@ -18,7 +18,7 @@ export default class Sdk {
   attachmentSuffix = [".slddrw", ".SLDDRW", ".pdf", ".PDF"];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: "http://192.168.0.62:8017/api/plm",
+      baseUrl: `http://${params.address || "192.168.0.62"}:8017/api/plm`,
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
