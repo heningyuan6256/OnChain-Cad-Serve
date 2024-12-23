@@ -95,6 +95,8 @@ export async function downloadDraw(params: TransformArgument) {
       const downloader = new Downloader(data, sdk.common);
       console.log("开始下载");
       await downloader.runDownloadDraw();
+      console.log(downloader,'downloader');
+      
       console.log("下载结束");
       const filesystem = await downloader.filesystem;
       //TODO 文件转换处理

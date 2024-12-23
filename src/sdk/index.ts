@@ -18,7 +18,7 @@ export default class Sdk {
   attachmentSuffix = [".slddrw", ".SLDDRW", ".pdf", ".PDF"];
   constructor(params: SdkBasicInfo) {
     this.common = new CommonUtils({
-      baseUrl: `http://${params.address || "192.168.0.62"}:8017/api/plm`,
+      baseUrl: `http://${params.address || "192.168.0.61"}:8017/api/plm`,
       fetch: (...params: [any, any]) => {
         return fetch(...params);
       },
@@ -324,6 +324,18 @@ export default class Sdk {
   /**更新下载图纸指定的附件 */
   async updateFileAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
     const modifyFile = new ModifyFile(filesystem[0].manage);
+    console.log([
+      {
+        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+        attachments: [
+          {
+            rowId: drawRowId || "",
+            url: filesystem[0].data.uploadURL || "",
+            mark: filesystem[0].data.uploadURL ? "true" : "failed",
+          },
+        ],
+      },
+    ],'修改的數據')
     return await modifyFile.modifyAttachments([
       {
         fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,

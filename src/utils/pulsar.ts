@@ -54,16 +54,17 @@ export const receivePulsarMessage = async () => {
     await consumer.run({
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
             const publishedInstances = JSON.parse(message.toString("UTF-8"))
+            console.log(publishedInstances,'publishedInstances')
             const token = publishedInstances.token
             const routing = publishedInstances.routing
             const tenantId = publishedInstances.tenantId
-            if (publishedInstances.type === 'downloadDraw') {
+            if (publishedInstances.data.type === 'downloadDraw') {
                 await downloadDraw({
                     tenantId: publishedInstances.tenantId,
-                    insId: publishedInstances.reqData.insId,
-                    userId: publishedInstances.data.userId,
-                    address: publishedInstances.reqData.address
-                  });
+                    insId: publishedInstances.data.reqData.insId,
+                    userId: publishedInstances.data.reqData.userId,
+                    address: publishedInstances.data.reqData.address || ''
+                });
             } else if (publishedInstances.data.type === 'transformDraw') {
                 await transform({
                     insId: publishedInstances.data.resData.changeInsId,
@@ -71,22 +72,23 @@ export const receivePulsarMessage = async () => {
                     userId: publishedInstances.data.userId,
                     address: publishedInstances.reqData.address
                 })
-            } else if(publishedInstances.data.type=='transformOStep'){
+            } else if (publishedInstances.data.type == 'transformOStep') {
                 await transformOstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
                     userId: publishedInstances.data.userId,
                     address: publishedInstances.reqData.address
-                  });
-            } else if(publishedInstances.data.type=='transformStep'){
+                });
+            } else if (publishedInstances.data.type == 'transformStep') {
                 await transformstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
                     address: publishedInstances.reqData.address,
                     userId: publishedInstances.data.userId,
-                  });
+                });
             }
-            // await ack(); // Default is individual ack
+            await ack(); // Defa
+            // ult is individual ack
 
         }, autoAck: false, // specify true in order to use automaticAck
     });

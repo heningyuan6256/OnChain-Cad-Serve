@@ -49,9 +49,9 @@ export default class Convertor {
     for (const fsy of this.filesystem) {
       const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${fsy.data.basicReadInstanceInfo.publishTime ? "-" + fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''}`
       // console.log('updateName=', updateName);
-      // updateNameList.push(`${fsy.filename.split(".")[0]}=${updateName}`)
+      updateNameList.push(`${fsy.filename.split(".")[0]}=${updateName}`)
       //TODO 上一行在我这执行会报错，先暂时去掉报错的字符串
-      updateNameList.push(`${updateName}`)
+      // updateNameList.push(`${updateName}`)
     }
     const fsy = this.filesystem[0]
     const fsyPath = this.getFileAddress(fsy);
@@ -66,6 +66,7 @@ export default class Convertor {
     console.log(execute, 'execute');
     const proc = Bun.spawn(execute);
     await proc.exited;
+    
 
     for (const fsy of this.filesystem) {
       await rm(fsy.saveAddress, { force: true })
