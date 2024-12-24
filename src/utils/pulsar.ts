@@ -73,7 +73,7 @@ export const receivePulsarMessage = async () => {
             const token = publishedInstances.token
             const routing = publishedInstances.routing
             const tenantId = publishedInstances.tenantId
-            if (publishedInstances.data.type === 'downloadDraw') {
+            if (publishedInstances.data.reqData.type === 'downloadDraw') {
                 await downloadDraw({
                     tenantId: publishedInstances.tenantId,
                     insId: publishedInstances.data.reqData.insId,
