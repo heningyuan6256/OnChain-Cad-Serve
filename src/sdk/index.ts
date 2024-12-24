@@ -362,7 +362,7 @@ export default class Sdk {
             return {
               rowId: drawRowId,
               url: att.data.uploadURL! || att.data.fileUrl,
-              mark: att.data.uploadURL ? "true" : "failed",
+              mark: att.data.uploadURL ? "1" : "2",
             };
           }),
         };

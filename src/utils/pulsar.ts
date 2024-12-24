@@ -53,8 +53,9 @@ export const receivePulsarMessage = async () => {
 
     await consumer.run({
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
-            const publishedInstances = JSON.parse(message.toString("UTF-8"))
-            console.log(publishedInstances,'publishedInstances')
+            let publishedInstances;
+            publishedInstances = JSON.parse(message.toString("UTF-8"))
+            console.log(publishedInstances, 'publishedInstances')
             const token = publishedInstances.token
             const routing = publishedInstances.routing
             const tenantId = publishedInstances.tenantId
@@ -77,13 +78,13 @@ export const receivePulsarMessage = async () => {
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
                     userId: publishedInstances.data.userId,
-                    address: publishedInstances.reqData.address
+                    address: publishedInstances.data.reqData.address || ''
                 });
             } else if (publishedInstances.data.type == 'transformStep') {
                 await transformstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
-                    address: publishedInstances.reqData.address,
+                    address: publishedInstances.data.reqData.address || '',
                     userId: publishedInstances.data.userId,
                 });
             }
