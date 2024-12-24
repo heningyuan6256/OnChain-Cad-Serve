@@ -6,18 +6,31 @@ import { sleep } from 'bun';
 import { downloadDraw, transform, transformOstep, transformstep } from '../app';
 import { readFile } from 'node:fs/promises';
 
+const stringD = (await readFile(".env",{encoding:'utf-8'})).toString()
+console.log(stringD,"stringD");
+
+const list = stringD.split("\r\n")
+
+const mapData: any = {}
+list.forEach(item => {
+    const [key, value] = item.split("=")
+    mapData[key] = value
+})
+console.log(mapData,'mapData');
+
+
 const producer = new Producer({
-    topic: `persistent://${process.env.tenantId}/${process.env.enviroment}/instance-released`,
-    discoveryServers: [process.env.pulsarURL],
+    topic: `persistent://${mapData.tenantId}/${mapData.enviroment}/instance-released`,
+    discoveryServers: [mapData.pulsarURL],
     jwt: process.env.JWT_TOKEN,
     producerAccessMode: Producer.ACCESS_MODES.SHARED,
     logLevel: logLevel.INFO
 })
 
 const consumer = new Consumer({
-    topic: `persistent://${process.env.tenantId}/${process.env.enviroment}/instance-released`,
+    topic: `persistent://${mapData.tenantId}/${mapData.enviroment}/instance-released`,
     subscription: "my-subscription",
-    discoveryServers: [process.env.pulsarURL],
+    discoveryServers: [mapData.pulsarURL],
     jwt: process.env.JWT_TOKEN,
     subType: Consumer.SUB_TYPES.EXCLUSIVE,
     consumerName: 'sw server',
@@ -60,29 +73,32 @@ export const receivePulsarMessage = async () => {
             const token = publishedInstances.token
             const routing = publishedInstances.routing
             const tenantId = publishedInstances.tenantId
-            if (publishedInstances.data.reqData.type === 'downloadDraw') {
+            if (publishedInstances.data.type === 'downloadDraw') {
                 await downloadDraw({
                     tenantId: publishedInstances.tenantId,
                     insId: publishedInstances.data.reqData.insId,
                     userId: publishedInstances.data.reqData.userId,
+                    address: mapData.baseUrl
                 });
             } else if (publishedInstances.data.reqData.type === 'transformDraw') {
                 await transform({
                     insId: publishedInstances.data.resData.changeInsId,
                     tenantId: publishedInstances.tenantId,
                     userId: publishedInstances.data.userId,
+                    address: mapData.baseUrl
                 })
             } else if (publishedInstances.data.reqData.type == 'transformOStep') {
                 await transformOstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
                     userId: publishedInstances.data.userId,
+                    address: mapData.baseUrl
                 });
             } else if (publishedInstances.data.reqData.type == 'transformStep') {
                 await transformstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
-                    address: publishedInstances.data.reqData.address || '',
+                    address: mapData.baseUrl,
                     userId: publishedInstances.data.userId,
                 });
             }
