@@ -4,19 +4,20 @@ import { Producer, Consumer, logLevel } from 'onchain-pulsar'
 import { BasicEnv } from '../../env';
 import { sleep } from 'bun';
 import { downloadDraw, transform, transformOstep, transformstep } from '../app';
+import { readFile } from 'node:fs/promises';
 
 const producer = new Producer({
-    topic: "persistent://719/dev/instance-released",
-    discoveryServers: [BasicEnv.pulsarURL],
+    topic: `persistent://${process.env.tenantId}/${process.env.enviroment}/instance-released`,
+    discoveryServers: [process.env.pulsarURL],
     jwt: process.env.JWT_TOKEN,
     producerAccessMode: Producer.ACCESS_MODES.SHARED,
     logLevel: logLevel.INFO
 })
 
 const consumer = new Consumer({
-    topic: "persistent://719/dev/instance-released",
+    topic: `persistent://${process.env.tenantId}/${process.env.enviroment}/instance-released`,
     subscription: "my-subscription",
-    discoveryServers: [BasicEnv.pulsarURL],
+    discoveryServers: [process.env.pulsarURL],
     jwt: process.env.JWT_TOKEN,
     subType: Consumer.SUB_TYPES.EXCLUSIVE,
     consumerName: 'sw server',
@@ -64,23 +65,20 @@ export const receivePulsarMessage = async () => {
                     tenantId: publishedInstances.tenantId,
                     insId: publishedInstances.data.reqData.insId,
                     userId: publishedInstances.data.reqData.userId,
-                    address: publishedInstances.data.reqData.address || ''
                 });
-            } else if (publishedInstances.data.type === 'transformDraw') {
+            } else if (publishedInstances.data.reqData.type === 'transformDraw') {
                 await transform({
                     insId: publishedInstances.data.resData.changeInsId,
                     tenantId: publishedInstances.tenantId,
                     userId: publishedInstances.data.userId,
-                    address: publishedInstances.reqData.address
                 })
-            } else if (publishedInstances.data.type == 'transformOStep') {
+            } else if (publishedInstances.data.reqData.type == 'transformOStep') {
                 await transformOstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,
                     userId: publishedInstances.data.userId,
-                    address: publishedInstances.data.reqData.address || ''
                 });
-            } else if (publishedInstances.data.type == 'transformStep') {
+            } else if (publishedInstances.data.reqData.type == 'transformStep') {
                 await transformstep({
                     tenantId: tenantId,
                     insId: publishedInstances.reqData.insId,

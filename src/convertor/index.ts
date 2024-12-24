@@ -109,6 +109,8 @@ export default class Convertor {
       "-step",
       fsyPath,
     ]
+    console.log(execute,'executeexecute');
+    
     const proc = Bun.spawn(execute);
     await proc.exited;
     return fsyPath.substring(0, fsyPath.lastIndexOf(".")) + '.STEP'

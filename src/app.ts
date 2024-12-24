@@ -3,7 +3,7 @@ import Downloader from "./downloader";
 import Convertor from "./convertor";
 import Uploader from "./uploader";
 import { compressFolder } from "./utils/compress";
-import { exists, rm } from "node:fs/promises";
+import { exists, rm, readFile } from "node:fs/promises";
 import { Attachment } from "./sdk/types";
 import { AttachmentTransferStatus } from "onchain-sdk";
 import moment from "moment";
@@ -177,7 +177,7 @@ export async function transformOstep(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `外壳-${nowTime}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-外壳-${nowTime}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
@@ -191,7 +191,7 @@ export async function transformOstep(params: TransformArgument) {
         },
       });
       const downloader = new Downloader(data, sdk.common);
-      await downloader.runDownloadDraw();
+      await downloader.runTransformOstep();
       const filesystem = await downloader.filesystem;
       const convertor = new Convertor(filesystem);
       let filePath = await convertor.transformOStep();
@@ -203,7 +203,7 @@ export async function transformOstep(params: TransformArgument) {
       const rootFilesystem = filesystem[0];
       //F把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = filePath;
-      rootFilesystem.filename = `外壳-${nowTime}.STEP`;
+      rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-外壳-${nowTime}.STEP`;
       rootFilesystem.dimension = "modify";
       const uploader = new Uploader([rootFilesystem], sdk.common);
       console.log("上传");
@@ -254,7 +254,7 @@ export async function transformstep(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${nowTime}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${nowTime}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
@@ -268,7 +268,7 @@ export async function transformstep(params: TransformArgument) {
         },
       });
       const downloader = new Downloader(data, sdk.common);
-      await downloader.runDownloadDraw();
+      await downloader.runTransformOstep();
       const filesystem = await downloader.filesystem;
       const convertor = new Convertor(filesystem);
       let filePath = await convertor.transformStep();
@@ -280,7 +280,7 @@ export async function transformstep(params: TransformArgument) {
       const rootFilesystem = filesystem[0];
       //F把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = filePath;
-      rootFilesystem.filename = `${nowTime}.STEP`;
+      rootFilesystem.filename = `${rootFilesystem.data.basicReadInstanceInfo.insDesc}-${nowTime}.STEP`;
       rootFilesystem.dimension = "modify";
       const uploader = new Uploader([rootFilesystem], sdk.common);
       console.log("上传");
