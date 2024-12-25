@@ -331,7 +331,7 @@ export default class Sdk {
           {
             rowId: drawRowId || "",
             url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "true" : "failed",
+            mark: filesystem[0].data.uploadURL ? "1" : "2",
           },
         ],
       },
@@ -343,7 +343,7 @@ export default class Sdk {
           {
             rowId: drawRowId || "",
             url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "true" : "failed",
+            mark: filesystem[0].data.uploadURL ? "1" : "2",
           },
         ],
       },

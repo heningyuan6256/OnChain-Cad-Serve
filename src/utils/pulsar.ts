@@ -69,12 +69,13 @@ export const receivePulsarMessage = async () => {
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
             let publishedInstances;
             publishedInstances = JSON.parse(message.toString("UTF-8"))
-            console.log(publishedInstances, 'publishedInstances')
+            console.log(publishedInstances,'publishedInstances');
+            
             if (publishedInstances.data.reqData) {
                 const token = publishedInstances.token
                 const routing = publishedInstances.routing
                 const tenantId = publishedInstances.tenantId
-                if (publishedInstances.data.reqData.type === 'downloadDraw') {
+                if (publishedInstances.data.reqData.type === 'tab_downloadDesignFile') {
                     await downloadDraw({
                         tenantId: publishedInstances.tenantId,
                         insId: publishedInstances.data.reqData.insId,
@@ -88,17 +89,17 @@ export const receivePulsarMessage = async () => {
                         userId: publishedInstances.data.userId,
                         address: mapData.baseUrl
                     })
-                } else if (publishedInstances.data.reqData.type == 'transformOStep') {
+                } else if (publishedInstances.data.reqData.type == 'transformOSTEP') {
                     await transformOstep({
                         tenantId: tenantId,
-                        insId: publishedInstances.reqData.insId,
+                        insId: publishedInstances.data.reqData.insId,
                         userId: publishedInstances.data.userId,
                         address: mapData.baseUrl
                     });
-                } else if (publishedInstances.data.reqData.type == 'transformStep') {
+                } else if (publishedInstances.data.reqData.type == 'transformSTEP') {
                     await transformstep({
                         tenantId: tenantId,
-                        insId: publishedInstances.reqData.insId,
+                        insId: publishedInstances.data.reqData.insId,
                         address: mapData.baseUrl,
                         userId: publishedInstances.data.userId,
                     });
