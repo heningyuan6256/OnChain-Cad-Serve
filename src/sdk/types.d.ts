@@ -14,4 +14,5 @@ export interface FileSelf extends IBaseInstance, FileInfo {
 
 export interface Attachment extends IRowInstance, FileInfo {
   isTransform: boolean;
+  transferStatus?: any
 }

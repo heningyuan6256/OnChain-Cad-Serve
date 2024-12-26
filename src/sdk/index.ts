@@ -242,12 +242,18 @@ export default class Sdk {
                 tab: attachmentTab,
                 attrApicode: "FileUrl",
               }) || "";
+
+              const attachmentCanDownload = attachment.getAttrValue({
+                tab: attachmentTab,
+                attrApicode: "CanDownload",
+              }) || "";
             //把每个附件的文件信息写入外层
             this.initializeFileInfo(attachment, {
               fileId: attachment.rowId,
               fileName: attachmentFileName,
-              fileUrl: attachmentFileUrl,
+              fileUrl: attachmentFileUrl
             });
+            attachment.transformStatus = attachmentCanDownload
             /** 处理是否为能转换的文件类型 */
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
               attachmentFileName.toUpperCase().endsWith(suffix)
