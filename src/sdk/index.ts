@@ -7,10 +7,17 @@ import {
   IRowInstance,
   ModifyFile,
   IChangeInstance,
+  PrintUtils,
+  placeFile,
+  UppyUploader,
+  AttachmentTransferStatus,
 } from "onchain-sdk";
 import { BasicsAttribute } from "onchain-sdk/lib/src/utils/attribute";
 import { Attachment, FileInfo, FileSelf } from "./types";
 import { Filesystem } from "../filesystem";
+import { mkdir, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import Uploader from "../uploader";
 
 export default class Sdk {
   common: CommonUtils;
@@ -27,8 +34,10 @@ export default class Sdk {
     });
   }
 
-  async getAffectFiles(insId: string) {
-    const change = await this.common.getInstanceById<IChangeInstance>(insId);
+  async getAffectFiles(params: any) {
+    const change = await this.common.getInstanceById<IChangeInstance>(
+      params.insId
+    );
     await change.getWorkflow();
     // const review = change.basicReadInstanceInfo.workflowNodes.find(
     //   (node) => node.apicode == "Review"
@@ -36,7 +45,9 @@ export default class Sdk {
     const { allData, usersData } = await change.getWorkflowApprovalRecord();
 
     // 获取审批通过的对象
-    const approved = allData.filter((item) => item.approve_instance_id && item.action == "1");
+    const approved = allData.filter(
+      (item) => item.approve_instance_id && item.action == "1"
+    );
     const allNodes: any = [];
 
     change.basicReadInstanceInfo.workflowNodes.forEach((item) => {
@@ -44,10 +55,17 @@ export default class Sdk {
       if (item.type == "2") {
         const node = approved.find((v) => v.node_id == item.id);
         if (node) {
-          const user = usersData.find((user) => user.value == node.approve_instance_id)?.label;
+          const user = usersData.find(
+            (user) => user.value == node.approve_instance_id
+          )?.label;
 
           if (user) {
-            allNodes.push(...[`${item.name}=${user}`, `${item.name}日期=${node.update_time.split(" ")[0]}`]);
+            allNodes.push(
+              ...[
+                `${item.name}=${user}`,
+                `${item.name}日期=${node.update_time.split(" ")[0]}`,
+              ]
+            );
           }
         }
       }
@@ -91,7 +109,10 @@ export default class Sdk {
         affectFiles
       );
       for (const instance of instanceList) {
-        const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(instance.BasicAttrs, "FileUrl");
+        const urlAttr: BasicsAttribute | undefined = utility.getAttrOf(
+          instance.BasicAttrs,
+          "FileUrl"
+        );
         this.initializeFileInfo(instance, {
           fileId: instance.basicReadInstanceInfo.insId,
           fileName: instance.basicReadInstanceInfo.insDesc,
@@ -115,7 +136,8 @@ export default class Sdk {
           //       },
           //     ],
           //     true,
-          //   )
+          //   ) 
+          const roles: any = await this.common.getRolesByCurrentUser();
           let attachments = (await attachmentTab.getTabData()) as Attachment[];
           attachments.forEach((attachment) => {
             const attachmentName =
@@ -123,6 +145,12 @@ export default class Sdk {
                 tab: attachmentTab,
                 attrApicode: "FileName",
               }) || "";
+            const attachCanDownload =
+              attachment.getAttrValue({
+                tab: attachmentTab,
+                attrApicode: "CanDownload",
+              }) || "";
+
             this.initializeFileInfo(attachment, {
               fileId: attachment.rowId,
               fileName: attachmentName,
@@ -132,13 +160,185 @@ export default class Sdk {
               }),
               approvalNodeInfo: allNodes,
             });
-            attachment.isTransform = this.attachmentSuffix.some((suffix) => attachmentName.endsWith(suffix));
+            attachment.attachCanDownload = attachCanDownload;
+            attachment.isTransform = this.attachmentSuffix.some((suffix) =>
+              attachmentName.endsWith(suffix)
+            );
+          }); 
+          // instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0" && item.isTransform);
+          instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0");
+          
+          const {
+            result: { records: Attrs },
+          } = await attachmentTab.getAttributeByTab({
+            itemCode: instance.basicReadInstanceInfo.itemCode,
+            tabCode: 10002008,
           });
-          instance.attachments = attachments.filter((item) => item.isTransform);
+          const AttrsMap = utility.transformArrayToMap(Attrs, "apicode", "id");
+
+          for (let attachmentData of instance.attachments) {
+            console.log(`111111111111111111111111111111111111111`);
+            let fileUrl = attachmentData[AttrsMap["FileUrl"]];
+            let fileFormat = attachmentData[AttrsMap["FileFormat"]];
+            let fileName = attachmentData[AttrsMap["FileName"]];
+            let fileId = attachmentData[AttrsMap["FileId"]];
+            PrintUtils.autoUploadPrintFileToAttachment({
+              user: params.userId,
+              fileFormat: fileFormat,
+              itemCode: String(attachmentData.itemCode),
+              fileUrl: fileUrl,
+              fileName: fileName,
+              insDesc: instance.basicReadInstanceInfo.insDesc,
+              latestCurrentUserInfo: { current: roles },
+              insId: attachmentData.insId,
+              insRevision: instance.basicReadInstanceInfo.insVersionOrder,
+              insVersion: instance.basicReadInstanceInfo.insVersion,
+              fonts: await readFile("./public/TsangerYuYangT_W03_W03.ttf"),
+              // fonts: '',
+              // StorageController,
+              transferformListByCodeList: async (n1: any, n2: any) => {
+                const res = await this.common.transferformListByCodeList(
+                  n1,
+                  n2
+                );
+                return res;
+              },
+              getConfigAttr: async () => {
+                console.log("format", fileFormat);
+                console.log("itemCode", attachmentData.itemCode);
+                console.log("instanceId", attachmentData.insId);
+                console.log(
+                  "versionNumber",
+                  instance.basicReadInstanceInfo.insVersion
+                );
+                const resFormat = await attachmentTab.getFormat({
+                  format: fileFormat,
+                  printType: "1",
+                  itemCode: attachmentData.itemCode,
+                  instanceId: attachmentData.insId,
+                  versionNumber:
+                    instance.basicReadInstanceInfo.insVersion || "Draft",
+                  tenantId: attachmentData.tenantId,
+                });
+                console.log("resFormat");
+                console.log("tenantId", attachmentData.tenantId);
+                console.log("userId", params.userId);
+                console.log("instanceId", attachmentData.insId);
+                console.log(
+                  "version",
+                  instance.basicReadInstanceInfo.insVersion
+                );
+                console.log(
+                  "versionOrder",
+                  instance.basicReadInstanceInfo.insVersionOrder
+                );
+                console.log("fileId", fileId);
+                const res = await attachmentTab.getAllConfigAttr({
+                  tenantId: attachmentData.tenantId,
+                  userId: params.userId,
+                  instanceId: attachmentData.insId,
+                  version: instance.basicReadInstanceInfo.insVersion,
+                  versionOrder: instance.basicReadInstanceInfo.insVersionOrder,
+                  type: "",
+                  printType: "1",
+                  templateId: resFormat.result[0].id,
+                  fileId: fileId,
+                });
+                return res;
+              },
+              getAutoTemplate: async () => {
+                const res = await attachmentTab.getAutoTemplate({
+                  instanceId: attachmentData.insId,
+                  versionNumber: instance.basicReadInstanceInfo.insVersion,
+                  format: fileFormat,
+                });
+                return res;
+              },
+              serveColumms: Attrs,
+              placeFile,
+              converBytes: utility.converBytes,
+              transfer2D: async () => {
+                let hostorigin = "http://192.168.0.62:8017";
+                console.log(444)
+                console.log(
+                  fileUrl.includes("http")
+                    ? `${hostorigin}/api/plm${
+                        fileUrl.split("?")[0].split("/plm")[1]
+                      }`
+                    : `${hostorigin}/api${fileUrl.split("?")[0]}`
+                );
+                const res = await this.common
+                  .getIFile()
+                  .transfer2D({
+                    previewUrl: fileUrl.includes("http")
+                      ? `${hostorigin}/api/plm${
+                          fileUrl.split("?")[0].split("/plm")[1]
+                        }`
+                      : `${hostorigin}/api${fileUrl.split("?")[0]}`,
+                    fileSuffix: fileFormat,
+                    fileName: attachmentData.insDesc || fileName,
+                  })
+                  .catch((e) => {
+                    console.log(e);
+                    console.log(2222222);
+                  });
+                console.log(res);
+                console.log(11111111111111111);
+                return res;
+              },
+              toPostFileRecord: async ({ file, response, type }: any) => {
+                const res = await attachmentTab.toPostFileRecord({
+                  file,
+                  response,
+                  type,
+                });
+                return res;
+              },
+              insertTabDataAttachments: async (data: any) => {
+                console.log("111234", data); 
+                const Uppys = new UppyUploader({
+                  OSS_URL: `${this.common.baseUrl.replace(
+                    "/api/plm",
+                    ""
+                  )}/api/plm/files`,
+                });
+                Uppys.addFile({
+                  source: "Local",
+                  name: data.name,
+                  type: "application/pdf;charset=utf-8",
+                  data: data.blob,
+                  meta: {
+                    relativePath: null,
+                  },
+                });
+                Uppys.uppy.on("complete", (res) => {
+                  console.log("res====");
+                  console.log(res);
+                  attachmentTab.insertTabDataAttachments({
+                    attachmentRows: [
+                      {
+                        // name: `图纸`,
+                        name: res.successful[0].name,
+                        size: res.successful[0].size,
+                        extension: res.successful[0].extension,
+                        id: res.successful[0].id,
+                        uploadURL: res.successful[0].uploadURL,
+                      },
+                    ],
+                    isCheckin: false,
+                    transferStatus: AttachmentTransferStatus.TransferSuccess,
+                    onSuccess(msg) {
+                      console.log("上传成功===", msg);
+                    },
+                  });
+                });
+              },
+            });
+          }
+          console.log("---------------------------");
         } else {
           instance.attachments = [];
         }
-
         const designFilesTab = await instance.getTabByApicode({
           apicode: "DesignFiles",
         });
@@ -196,18 +396,26 @@ export default class Sdk {
       /** 根实例BOM页签根的实例数据 */
       const StructureData = await rootTabBom.getTabData();
       /** 根实例BOM页签平铺后的实例数据 */
-      const rootTabBomFlattenDatas = utility.ArrayAttributeFlat(StructureData) as IRowInstance[];
+      const rootTabBomFlattenDatas = utility.ArrayAttributeFlat(
+        StructureData
+      ) as IRowInstance[];
       /** 根+BOM平铺后所有的实例数据 */
-      const instanceList = [rootInstance, ...(await this.getInstances(rootTabBomFlattenDatas))];
+      const instanceList = [
+        rootInstance,
+        ...(await this.getInstances(rootTabBomFlattenDatas)),
+      ];
 
       /** 根实例设计文件的FileUrl的属性对象 */
-      const rootDesignAttrFileUrl: BasicsAttribute | undefined = utility.getAttrOf(rootTabDesign.attrs, "FileUrl");
+      const rootDesignAttrFileUrl: BasicsAttribute | undefined =
+        utility.getAttrOf(rootTabDesign.attrs, "FileUrl");
       /** 根实例设计文件的FileName的属性对象 */
-      const rootDesignAttrFileName: BasicsAttribute | undefined = utility.getAttrOf(rootTabDesign.attrs, "FileName");
+      const rootDesignAttrFileName: BasicsAttribute | undefined =
+        utility.getAttrOf(rootTabDesign.attrs, "FileName");
 
       for (const instance of instanceList) {
         /** 设计文件的文件名 */
-        const instanceFileName = instance.basicReadInstanceInfo.attributes[rootDesignAttrFileName!.id];
+        const instanceFileName =
+          instance.basicReadInstanceInfo.attributes[rootDesignAttrFileName!.id];
         if (!instanceFileName || instanceFileName == "") {
           console.log("设计文件无数据,index=", instanceList.indexOf(instance));
           continue;
@@ -234,7 +442,10 @@ export default class Sdk {
                 attrApicode: "FileName",
               }) || "";
             if (!attachmentFileName || attachmentFileName == "") {
-              console.log("附件页签无文件数据,index=", instanceList.indexOf(instance));
+              console.log(
+                "附件页签无文件数据,index=",
+                instanceList.indexOf(instance)
+              );
               continue;
             }
             const attachmentFileUrl =
@@ -266,15 +477,23 @@ export default class Sdk {
 
   filterSuffix(data: IRowInstance[]) {
     return data.filter((row) =>
-      this.fileSuffix.some((suffix) => row.insDesc.endsWith(suffix) && !BasicsAuthority.isMosaic(row.insId))
+      this.fileSuffix.some(
+        (suffix) =>
+          row.insDesc.endsWith(suffix) && !BasicsAuthority.isMosaic(row.insId)
+      )
     );
   }
 
   getInstances(data: IRowInstance[]) {
-    return Promise.all(data.map((row) => this.common.getInstanceById<FileSelf>(row.insId)));
+    return Promise.all(
+      data.map((row) => this.common.getInstanceById<FileSelf>(row.insId))
+    );
   }
 
-  private getFileUrl(instance: IBaseInstance | IRowInstance, attr?: BasicsAttribute) {
+  private getFileUrl(
+    instance: IBaseInstance | IRowInstance,
+    attr?: BasicsAttribute
+  ) {
     let fileUrl: string = "";
     if (attr) {
       if (this.isInstance(instance)) {
@@ -293,8 +512,11 @@ export default class Sdk {
     return !!ins.basicReadInstanceInfo;
   }
 
-  private initializeFileInfo(instance: IBaseInstance | IRowInstance, info: Partial<FileInfo>) {
-    console.log("设计文件/附件的文件数据=", info);
+  private initializeFileInfo(
+    instance: IBaseInstance | IRowInstance,
+    info: Partial<FileInfo>
+  ) {
+    // console.log("设计文件/附件的文件数据=", info);
     Object.assign(instance, info);
   }
 
@@ -307,7 +529,10 @@ export default class Sdk {
     //   }
     // }
     const modifyFile = new ModifyFile(filesystem[0].manage);
-    console.log("filesystem[0].attachments---------", filesystem[0].attachments?.length);
+    console.log(
+      "filesystem[0].attachments---------",
+      filesystem[0].attachments?.length
+    );
     /**
      * TODO
      * 就是这里之后不知道怎么处理
@@ -322,20 +547,26 @@ export default class Sdk {
   }
 
   /**更新下载图纸指定的附件 */
-  async updateFileAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
+  async updateFileAttachment(
+    filesystem: Filesystem<FileSelf>[],
+    drawRowId?: string
+  ) {
     const modifyFile = new ModifyFile(filesystem[0].manage);
-    console.log([
-      {
-        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
-        attachments: [
-          {
-            rowId: drawRowId || "",
-            url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "true" : "failed",
-          },
-        ],
-      },
-    ],'修改的數據')
+    console.log(
+      [
+        {
+          fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+          attachments: [
+            {
+              rowId: drawRowId || "",
+              url: filesystem[0].data.uploadURL || "",
+              mark: filesystem[0].data.uploadURL ? "true" : "failed",
+            },
+          ],
+        },
+      ],
+      "修改的數據"
+    );
     return await modifyFile.modifyAttachments([
       {
         fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
@@ -350,7 +581,10 @@ export default class Sdk {
     ]);
   }
 
-  private uploadAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
+  private uploadAttachment(
+    filesystem: Filesystem<FileSelf>[],
+    drawRowId?: string
+  ) {
     const files = filesystem
       .filter((fsy) => fsy.attachments?.length)
       .map((fsy) => {
