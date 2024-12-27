@@ -453,12 +453,18 @@ export default class Sdk {
                 tab: attachmentTab,
                 attrApicode: "FileUrl",
               }) || "";
+
+              const attachmentCanDownload = attachment.getAttrValue({
+                tab: attachmentTab,
+                attrApicode: "CanDownload",
+              }) || "";
             //把每个附件的文件信息写入外层
             this.initializeFileInfo(attachment, {
               fileId: attachment.rowId,
               fileName: attachmentFileName,
-              fileUrl: attachmentFileUrl,
+              fileUrl: attachmentFileUrl
             });
+            attachment.transferStatus = attachmentCanDownload
             /** 处理是否为能转换的文件类型 */
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
               attachmentFileName.toUpperCase().endsWith(suffix)
@@ -552,21 +558,18 @@ export default class Sdk {
     drawRowId?: string
   ) {
     const modifyFile = new ModifyFile(filesystem[0].manage);
-    console.log(
-      [
-        {
-          fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
-          attachments: [
-            {
-              rowId: drawRowId || "",
-              url: filesystem[0].data.uploadURL || "",
-              mark: filesystem[0].data.uploadURL ? "true" : "failed",
-            },
-          ],
-        },
-      ],
-      "修改的數據"
-    );
+    console.log([
+      {
+        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+        attachments: [
+          {
+            rowId: drawRowId || "",
+            url: filesystem[0].data.uploadURL || "",
+            mark: filesystem[0].data.uploadURL ? "1" : "2",
+          },
+        ],
+      },
+    ],'修改的數據')
     return await modifyFile.modifyAttachments([
       {
         fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
@@ -574,7 +577,7 @@ export default class Sdk {
           {
             rowId: drawRowId || "",
             url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "true" : "failed",
+            mark: filesystem[0].data.uploadURL ? "1" : "2",
           },
         ],
       },

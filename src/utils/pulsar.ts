@@ -6,8 +6,8 @@ import { sleep } from 'bun';
 import { downloadDraw, transform, transformOstep, transformstep } from '../app';
 import { readFile } from 'node:fs/promises';
 
-const stringD = (await readFile(".env",{encoding:'utf-8'})).toString()
-console.log(stringD,"stringD");
+const stringD = (await readFile(".env", { encoding: 'utf-8' })).toString()
+console.log(stringD, "stringD");
 
 const list = stringD.split("\r\n")
 
@@ -16,7 +16,7 @@ list.forEach(item => {
     const [key, value] = item.split("=")
     mapData[key] = value
 })
-console.log(mapData,'mapData');
+console.log(mapData, 'mapData');
 
 
 const producer = new Producer({
@@ -69,40 +69,44 @@ export const receivePulsarMessage = async () => {
         onMessage: async ({ ack, message, properties, redeliveryCount }: any) => {
             let publishedInstances;
             publishedInstances = JSON.parse(message.toString("UTF-8"))
-            console.log(publishedInstances, 'publishedInstances')
-            const token = publishedInstances.token
-            const routing = publishedInstances.routing
-            const tenantId = publishedInstances.tenantId
-            if (publishedInstances.data.reqData.type === 'downloadDraw') {
-                await downloadDraw({
-                    tenantId: publishedInstances.tenantId,
-                    insId: publishedInstances.data.reqData.insId,
-                    userId: publishedInstances.data.reqData.userId,
-                    address: mapData.baseUrl
-                });
-            } else if (publishedInstances.data.reqData.type === 'transformDraw') {
-                await transform({
-                    insId: publishedInstances.data.resData.changeInsId,
-                    tenantId: publishedInstances.tenantId,
-                    userId: publishedInstances.data.userId,
-                    address: mapData.baseUrl
-                })
-            } else if (publishedInstances.data.reqData.type == 'transformOStep') {
-                await transformOstep({
-                    tenantId: tenantId,
-                    insId: publishedInstances.reqData.insId,
-                    userId: publishedInstances.data.userId,
-                    address: mapData.baseUrl
-                });
-            } else if (publishedInstances.data.reqData.type == 'transformStep') {
-                await transformstep({
-                    tenantId: tenantId,
-                    insId: publishedInstances.reqData.insId,
-                    address: mapData.baseUrl,
-                    userId: publishedInstances.data.userId,
-                });
+            console.log(publishedInstances,'publishedInstances');
+            
+            if (publishedInstances.data.reqData) {
+                const token = publishedInstances.token
+                const routing = publishedInstances.routing
+                const tenantId = publishedInstances.tenantId
+                if (publishedInstances.data.reqData.type === 'tab_downloadDesignFile') {
+                    await downloadDraw({
+                        tenantId: publishedInstances.tenantId,
+                        insId: publishedInstances.data.reqData.insId,
+                        userId: publishedInstances.data.reqData.userId,
+                        address: mapData.baseUrl
+                    });
+                } else if (publishedInstances.data.reqData.type === 'transformDraw') {
+                    await transform({
+                        insId: publishedInstances.data.resData.changeInsId,
+                        tenantId: publishedInstances.tenantId,
+                        userId: publishedInstances.data.userId,
+                        address: mapData.baseUrl
+                    })
+                } else if (publishedInstances.data.reqData.type == 'transformOSTEP') {
+                    await transformOstep({
+                        tenantId: tenantId,
+                        insId: publishedInstances.data.reqData.insId,
+                        userId: publishedInstances.data.userId,
+                        address: mapData.baseUrl
+                    });
+                } else if (publishedInstances.data.reqData.type == 'transformSTEP') {
+                    await transformstep({
+                        tenantId: tenantId,
+                        insId: publishedInstances.data.reqData.insId,
+                        address: mapData.baseUrl,
+                        userId: publishedInstances.data.userId,
+                    });
+                }
+                await ack(); // Defa
             }
-            await ack(); // Defa
+
             // ult is individual ack
 
         }, autoAck: false, // specify true in order to use automaticAck

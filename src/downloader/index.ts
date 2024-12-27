@@ -42,12 +42,18 @@ export default class Downloader {
         try {
           console.log('下载附件文件：', attFsy.filename);
           //下载附件页签的文件
-          const res = await attFsy.manage.download();
-          // if (attFsy.filename.endsWith(".pdf") || attFsy.filename.endsWith(".PDF")) {
-          //   await Bun.write(attFsy.saveAddressWithDateAndVersion(fsy.data.basicReadInstanceInfo.insVersionUnbound, fsy.data.basicReadInstanceInfo.publishTime ? fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''), res);
-          // } else {
-          await Bun.write(attFsy.saveAddress, res)
-          // }
+          //@ts-ignore
+          console.log(attFsy.transferStatus,"attFsy.transferStatus");
+          
+          //@ts-ignore
+          if(!attFsy.transferStatus && attFsy.transferStatus != '0') {
+            const res = await attFsy.manage.download();
+            // if (attFsy.filename.endsWith(".pdf") || attFsy.filename.endsWith(".PDF")) {
+            //   await Bun.write(attFsy.saveAddressWithDateAndVersion(fsy.data.basicReadInstanceInfo.insVersionUnbound, fsy.data.basicReadInstanceInfo.publishTime ? fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''), res);
+            // } else {
+            await Bun.write(attFsy.saveAddress, res)
+            // }
+          }
         } catch (error) {
           console.log(`下载附件文件【${attFsy.filename}】失败，跳过`);
           continue;
