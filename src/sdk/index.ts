@@ -165,8 +165,8 @@ export default class Sdk {
               attachmentName.endsWith(suffix)
             );
           }); 
-          // instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0" && item.isTransform);
-          instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0");
+          instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0" && item.isTransform);
+          // instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0");
           
           const {
             result: { records: Attrs },
