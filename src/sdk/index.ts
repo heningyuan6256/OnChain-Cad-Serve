@@ -253,7 +253,7 @@ export default class Sdk {
               fileName: attachmentFileName,
               fileUrl: attachmentFileUrl
             });
-            attachment.transformStatus = attachmentCanDownload
+            attachment.transferStatus = attachmentCanDownload
             /** 处理是否为能转换的文件类型 */
             attachment.isTransform = this.attachmentSuffix.some((suffix) =>
               attachmentFileName.toUpperCase().endsWith(suffix)
