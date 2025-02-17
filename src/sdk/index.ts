@@ -289,7 +289,7 @@ export default class Sdk {
                       attachmentRows: [
                         {
                           // name: `图纸`,
-                          name: `${res.successful[0].name.substring(0,res.successful[0].name.lastIndexOf("."))}-${instance.basicReadInstanceInfo.statusName}`,
+                          name: `${res.successful[0].name.substring(0,res.successful[0].name.lastIndexOf("."))}-${instance.basicReadInstanceInfo.statusName}.PDF`,
                           size: res.successful[0].size,
                           extension: res.successful[0].extension,
                           id: res.successful[0].id,

@@ -74,10 +74,11 @@ export async function downloadDraw(params: TransformArgument) {
       //   console.log('此实例已存在图纸数据，结束处理');
       //   return;
       // }
+      
       await rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.zip`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}.zip`,
             size: 0,
             extension: "zip",
             id: drawingId,
@@ -188,7 +189,7 @@ export async function transformOstep(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
@@ -273,7 +274,7 @@ export async function transformstep(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,
