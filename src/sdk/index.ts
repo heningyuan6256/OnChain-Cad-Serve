@@ -9,7 +9,8 @@ import {
   IChangeInstance,
   PrintUtils,
   UppyUploader,
-  AttachmentTransferStatus
+  AttachmentTransferStatus,
+  ItemCode
 } from "onchain-sdk";
 import { BasicsAttribute } from "onchain-sdk/lib/src/utils/attribute";
 import { Attachment, FileInfo, FileSelf } from "./types";
@@ -67,7 +68,7 @@ export default class Sdk {
     const affectPartsTab = await change.getTabByApicode({
       apicode: "AffectParts",
     });
-    
+
     if (affectPartsTab) {
       let affectFiles = await affectPartsTab.getTabData();
       affectFiles = this.flattenAndRemoveDuplicates(affectFiles)
@@ -148,8 +149,6 @@ export default class Sdk {
 
           try {
             for (let attachmentData of instance.attachments) {
-              console.log(`111111111111111111111111111111111111111`);
-              console.log(this.common.baseUrl.slice(0, -3))
               let fileUrl = attachmentData[AttrsMap["FileUrl"]];
               let fileFormat = attachmentData[AttrsMap["FileFormat"]];
               let fileName = attachmentData[AttrsMap["FileName"]];
@@ -178,13 +177,6 @@ export default class Sdk {
                   return res;
                 },
                 getConfigAttr: async () => {
-                  console.log("format", fileFormat);
-                  console.log("itemCode", attachmentData.itemCode);
-                  console.log("instanceId", attachmentData.insId);
-                  console.log(
-                    "versionNumber",
-                    instance.basicReadInstanceInfo.insVersion
-                  );
                   const resFormat = await attachmentTab.getFormat({
                     format: fileFormat,
                     printType: "1",
@@ -194,19 +186,6 @@ export default class Sdk {
                       instance.basicReadInstanceInfo.insVersion || "Draft",
                     tenantId: attachmentData.tenantId,
                   });
-                  console.log("resFormat");
-                  console.log("tenantId", attachmentData.tenantId);
-                  console.log("userId", params.userId);
-                  console.log("instanceId", attachmentData.insId);
-                  console.log(
-                    "version",
-                    instance.basicReadInstanceInfo.insVersion
-                  );
-                  console.log(
-                    "versionOrder",
-                    instance.basicReadInstanceInfo.insVersionOrder
-                  );
-                  console.log("fileId", fileId);
                   const res = await attachmentTab.getAllConfigAttr({
                     tenantId: attachmentData.tenantId,
                     userId: params.userId,
@@ -232,13 +211,6 @@ export default class Sdk {
                 converBytes: utility.converBytes,
                 transfer2D: async () => {
                   let hostorigin = "http://192.168.0.62:8017";
-                  console.log(444)
-                  console.log(
-                    fileUrl.includes("http")
-                      ? `${hostorigin}/api/plm${fileUrl.split("?")[0].split("/plm")[1]
-                      }`
-                      : `${hostorigin}/api${fileUrl.split("?")[0]}`
-                  );
                   const res = await this.common
                     .getIFile()
                     .transfer2D({
@@ -250,11 +222,7 @@ export default class Sdk {
                       fileName: attachmentData.insDesc || fileName,
                     })
                     .catch((e) => {
-                      console.log(e);
-                      console.log(2222222);
                     });
-                  console.log(res);
-                  console.log(11111111111111111);
                   return res;
                 },
                 toPostFileRecord: async ({ file, response, type }: any) => {
@@ -283,13 +251,21 @@ export default class Sdk {
                     },
                   });
                   Uppys.uppy.on("complete", (res) => {
-                    console.log("res====");
-                    console.log(res);
+                    let specName = ''
+                    if (ItemCode.isChangeInstruction(change.basicReadInstanceInfo.itemCode)) {
+                      specName = '-试制'
+                    } else {
+                      if (instance.basicReadInstanceInfo.lifecycle.code == 10007002) {
+                        specName = '-试制'
+                      } else {
+                        specName = '-受控'
+                      }
+                    }
                     attachmentTab.insertTabDataAttachments({
                       attachmentRows: [
                         {
                           // name: `图纸`,
-                          name: `${res.successful[0].name.substring(0,res.successful[0].name.lastIndexOf("."))}-${instance.basicReadInstanceInfo.statusName}.PDF`,
+                          name: `${res.successful[0].name.substring(0, res.successful[0].name.lastIndexOf("."))}-${instance.basicReadInstanceInfo.statusName}${specName}.PDF`,
                           size: res.successful[0].size,
                           extension: res.successful[0].extension,
                           id: res.successful[0].id,
@@ -307,10 +283,8 @@ export default class Sdk {
               });
             }
           } catch (error) {
-            console.log(123123);
+            console.log("发生错误");
           }
-
-          console.log("---------------------------");
         } else {
           instance.attachments = [];
         }
@@ -353,7 +327,7 @@ export default class Sdk {
   }
 
   async getChangeInfo(number: string) {
-    console.log(number,"变更number")
+    console.log(number, "变更number")
     const change = await this.common.getInstance<IChangeInstance>(number);
     await change.getWorkflow();
     const { allData, usersData } = await change.getWorkflowApprovalRecord();
