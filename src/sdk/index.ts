@@ -177,15 +177,21 @@ export default class Sdk {
                   return res;
                 },
                 getConfigAttr: async () => {
-                  const resFormat = await attachmentTab.getFormat({
-                    format: fileFormat,
-                    printType: "1",
-                    itemCode: attachmentData.itemCode,
+                  const resFormat = await attachmentTab.getAutoTemplate({
                     instanceId: attachmentData.insId,
-                    versionNumber:
-                      instance.basicReadInstanceInfo.insVersion || "Draft",
-                    tenantId: attachmentData.tenantId,
+                    versionNumber: instance.basicReadInstanceInfo.insVersion,
+                    format: fileFormat,
                   });
+                  // const id = resFormat.result[0].id
+                  // const resFormat = await attachmentTab.getFormat({
+                  //   format: fileFormat,
+                  //   printType: "1",
+                  //   itemCode: attachmentData.itemCode,
+                  //   instanceId: attachmentData.insId,
+                  //   versionNumber:
+                  //     instance.basicReadInstanceInfo.insVersion || "Draft",
+                  //   tenantId: attachmentData.tenantId,
+                  // });
                   const res = await attachmentTab.getAllConfigAttr({
                     tenantId: attachmentData.tenantId,
                     userId: params.userId,
