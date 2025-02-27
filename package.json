@@ -21,7 +21,7 @@
     "@std/media-types": "npm:@jsr/std__media-types",
     "adm-zip": "^0.5.16",
     "onchain-pulsar": "0.0.3",
-    "onchain-sdk": "3.9.4",
+    "onchain-sdk": "3.9.5-alpha1",
     "@pdfme/generator": "1.0.17",
     "pdf-lib": "^1.17.1",
     "pdf-merger-js": "^4.1.2"
