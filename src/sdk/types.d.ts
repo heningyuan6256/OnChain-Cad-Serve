@@ -13,6 +13,9 @@ export interface FileSelf extends IBaseInstance, FileInfo {
 }
 
 export interface Attachment extends IRowInstance, FileInfo {
+  /** 是否需要设计工具转换 */
   isTransform: boolean;
+  /** 是否可下载附件 */
+  attachCanDownload?: "0" | string;
   transferStatus?: any
 }

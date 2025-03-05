@@ -54,6 +54,7 @@ build/Release
 test/
 transform/
 node_modules/
+logs/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
@@ -175,3 +176,4 @@ dist
 yarn.lock
 yalc.lock
 cad-serve.exe
+transform.zip

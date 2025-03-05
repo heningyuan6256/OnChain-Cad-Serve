@@ -16,6 +16,7 @@ import { BasicsAttribute } from "onchain-sdk/lib/src/utils/attribute";
 import { Attachment, FileInfo, FileSelf } from "./types";
 import { Filesystem } from "../filesystem";
 import { readFile } from "node:fs/promises";
+import { Action, Log } from "../log";
 
 export default class Sdk {
   common: CommonUtils;
@@ -61,16 +62,27 @@ export default class Sdk {
   }
 
   async getAffectFiles(params: any) {
-    const change = await this.common.getInstanceById<IChangeInstance>(
+    const change = await  Log.takeover(this.common.getInstanceById<IChangeInstance>(
       params.insId
-    )
+    ), {
+      number: params.insId,
+      action: Action.getInstance,
+    });
 
-    const affectPartsTab = await change.getTabByApicode({
+    const affectPartsTab = await Log.takeover(change.getTabByApicode({
       apicode: "AffectParts",
+    }), {
+      number: change.basicReadInstanceInfo.number,
+      action: Action.getTab,
+      tab: "AffectParts",
     });
 
     if (affectPartsTab) {
-      let affectFiles = await affectPartsTab.getTabData();
+      let affectFiles = await Log.takeover(affectPartsTab.getTabData(), {
+        number: change.basicReadInstanceInfo.number,
+        action: Action.getTabList,
+        tab: "AffectParts",
+      });
       affectFiles = this.flattenAndRemoveDuplicates(affectFiles)
       console.log(affectFiles.map(item => item.number), "要转换的数据");
       // 扁平化当前的数据
@@ -91,8 +103,12 @@ export default class Sdk {
           fileName: instance.basicReadInstanceInfo.insDesc,
           fileUrl: this.getFileUrl(instance, urlAttr),
         });
-        const attachmentTab = await instance.getTabByApicode({
+        const attachmentTab = await Log.takeover(instance.getTabByApicode({
           apicode: "Attachments",
+        }), {
+          number: instance.basicReadInstanceInfo.number,
+          action: Action.getTab,
+          tab: "Attachments"
         });
         if (attachmentTab) {
           // await attachmentTab
@@ -109,8 +125,15 @@ export default class Sdk {
           //     ],
           //     true,
           //   ) 
-          const roles: any = await this.common.getRolesByCurrentUser();
-          let attachments = (await attachmentTab.getTabData()) as Attachment[];
+          const roles = await await Log.takeover(this.common.getRolesByCurrentUser(), {
+            action: Action.getLoginUser,
+            userId: this.common.userId
+          });
+          let attachments = (await Log.takeover(attachmentTab.getTabData(),  {
+            number: change.basicReadInstanceInfo.number,
+            action: Action.getTabList,
+            tab: "Attachments",
+          })) as Attachment[];
           attachments.forEach((attachment) => {
             const attachmentName =
               attachment.getAttrValue({
@@ -136,15 +159,20 @@ export default class Sdk {
               attachmentName.endsWith(suffix)
             );
           });
+          // 通过文件后缀、CanDownload属性过滤掉不需要转换的附件
           instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0" && item.isTransform);
           // instance.attachments = attachments.filter((item) => !item.attachCanDownload && item.attachCanDownload != "0");
 
           const {
             result: { records: Attrs },
-          } = await attachmentTab.getAttributeByTab({
+          } = await Log.takeover(attachmentTab.getAttributeByTab({
             itemCode: instance.basicReadInstanceInfo.itemCode,
             tabCode: 10002008,
-          });
+          }), { 
+            action: Action.getTabAttr,
+            number: change.basicReadInstanceInfo.number,
+            tab: '10002008'
+           });
           const AttrsMap = utility.transformArrayToMap(Attrs, "apicode", "id");
 
           try {
@@ -153,7 +181,7 @@ export default class Sdk {
               let fileFormat = attachmentData[AttrsMap["FileFormat"]];
               let fileName = attachmentData[AttrsMap["FileName"]];
               let fileId = attachmentData[AttrsMap["FileId"]];
-              PrintUtils.autoUploadPrintFileToAttachment({
+              Log.takeover(PrintUtils.autoUploadPrintFileToAttachment({
                 //@ts-ignore
                 user: params.userId,
                 fileFormat: fileFormat,
@@ -267,7 +295,7 @@ export default class Sdk {
                         specName = '-受控'
                       }
                     }
-                    attachmentTab.insertTabDataAttachments({
+                    Log.takeover(attachmentTab.insertTabDataAttachments({
                       attachmentRows: [
                         {
                           // name: `图纸`,
@@ -283,9 +311,15 @@ export default class Sdk {
                       onSuccess(msg) {
                         console.log("上传成功===", msg);
                       },
+                    }), {
+                      action: Action.insertAttach,
+                      number: instance.basicReadInstanceInfo.number,
                     });
                   });
                 },
+              }), {
+                action: Action.uploadPrintAttach,
+                number: instance.basicReadInstanceInfo.number,
               });
             }
           } catch (error) {
@@ -294,11 +328,17 @@ export default class Sdk {
         } else {
           instance.attachments = [];
         }
-        const designFilesTab = await instance.getTabByApicode({
+        const designFilesTab = await Log.takeover(instance.getTabByApicode({
           apicode: "DesignFiles",
+        }), {
+          action: Action.getTab,
+          tab: 'DesignFiles'
         });
         if (designFilesTab) {
-          let designFiles = (await designFilesTab.getTabData()) as Attachment[];
+          let designFiles = (await Log.takeover(designFilesTab.getTabData(), {
+            action: Action.getTabList,
+            tab: 'DesignFiles'
+          })) as Attachment[];
           designFiles.forEach((designFile) => {
             const attachmentName =
               designFile.getAttrValue({
@@ -460,7 +500,7 @@ export default class Sdk {
   }
 
   getInstances(data: IRowInstance[]) {
-    return Promise.all(data.map((row) => this.common.getInstanceById<FileSelf>(row.insId)));
+    return Promise.all(data.map((row) => Log.takeover(this.common.getInstanceById<FileSelf>(row.insId), { number: row.number, action: Action.getInstance })));
   }
 
   private getFileUrl(instance: IBaseInstance | IRowInstance, attr?: BasicsAttribute) {
