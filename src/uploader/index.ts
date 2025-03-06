@@ -2,14 +2,16 @@ import { CommonUtils } from "onchain-sdk";
 import { Attachment, FileSelf } from "../sdk/types";
 import { Filesystem } from "../filesystem";
 import { FileUploadInfo } from "./type";
+import { Action, Log } from "../log";
 
 export default class Uploader {
   filesystem: Filesystem<FileSelf>[];
   common: CommonUtils;
-
-  constructor(filesystem: Filesystem<FileSelf>[], common: CommonUtils) {
+  instanceIdent: string
+  constructor(filesystem: Filesystem<FileSelf>[], common: CommonUtils, instanceIdent: string) {
     this.filesystem = filesystem;
     this.common = common;
+    this.instanceIdent = instanceIdent;
   }
   /**
    * 执行上传
@@ -48,7 +50,7 @@ export default class Uploader {
     file: FileUploadInfo
   ) {
     if (filesystem.dimension == "modify" || filesystem.dimension == "new") {
-      const result = await filesystem.manage.upload({ file, fileLimitSize: 1000 * 1024 * 1024 });
+      const result = await Log.takeover(filesystem.manage.upload({ file, fileLimitSize: 1000 * 1024 * 1024 }), { action: Action.upload, number: this.instanceIdent });
       const success = result.successful[0];
       if (success) {
         const uploadURL = success.uploadURL.split("/plm")[1];

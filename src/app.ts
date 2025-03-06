@@ -7,6 +7,7 @@ import { exists, rm, readFile } from "node:fs/promises";
 import { Attachment } from "./sdk/types";
 import { AttachmentTransferStatus } from "onchain-sdk";
 import moment from "moment";
+import { Action, Log } from "./log";
 
 export async function transform(params: TransformArgument) {
   try {
@@ -49,15 +50,16 @@ export async function downloadDraw(params: TransformArgument) {
     }
     // TODO 塞一条正在转换的记录
     /** 获取结构数据，把根实例下所有附件信息写到外层，并处理isTransform */
-    const data = await sdk.getStructureTab(params.insId);
+    const data = await Log.takeover(sdk.getStructureTab(params.insId), { action: Action.getStructureTab, number: params.insId });
     console.log("data==", data.length);
     /** 根实例 */
     const rootInstance = data[0];
+    const rootInstanceNumber = rootInstance.basicReadInstanceInfo.number;
     // console.log('BasicAttrs===', JSON.stringify(rootInstance));
     /** 根实例的附件页签 */
-    const rootInsAttachTab = await rootInstance.getTabByApicode({
+    const rootInsAttachTab = await Log.takeover(rootInstance.getTabByApicode({
       apicode: "Attachments",
-    });
+    }), { action: Action.getTab, number: rootInstanceNumber });
     // console.log("rootInsAttachTab===", rootInsAttachTab);
     if (rootInsAttachTab) {
       /** 根实例的附件页签数据 */
@@ -75,7 +77,7 @@ export async function downloadDraw(params: TransformArgument) {
       //   return;
       // }
       
-      await rootInsAttachTab.insertTabDataAttachments({
+      await Log.takeover(rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
             name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}.zip`,
@@ -90,9 +92,12 @@ export async function downloadDraw(params: TransformArgument) {
         onSuccess(msg) {
           console.log("上传成功==", msg);
         },
+      }), {
+        action: Action.insertAttach,
+        number: rootInstanceNumber,
       });
 
-      const downloader = new Downloader(data, sdk.common);
+      const downloader = new Downloader(data, sdk.common, rootInstanceNumber);
       console.log("开始下载");
       await downloader.runDownloadDraw();
       // console.log(downloader,'downloader');
@@ -100,13 +105,13 @@ export async function downloadDraw(params: TransformArgument) {
       console.log("下载结束");
       const filesystem = await downloader.filesystem;
       //TODO 文件转换处理
-      const convertor = new Convertor(filesystem);
+      const convertor = new Convertor(filesystem, rootInstanceNumber);
       console.log("转换");
       // 执行写属性
       await convertor.run();
       // 修改名称
       await convertor.updateName();
-      await compressFolder("./transform");
+      await compressFolder("./transform", rootInstanceNumber);
 
       if (filesystem.length == 0) {
         console.log("待处理的转换FS为空");
@@ -121,13 +126,13 @@ export async function downloadDraw(params: TransformArgument) {
       rootFilesystem.saveAddressCustom = "./transform.zip";
       rootFilesystem.filename = "transform.zip";
       rootFilesystem.dimension = "modify";
-      const uploader = new Uploader([rootFilesystem], sdk.common);
+      const uploader = new Uploader([rootFilesystem], sdk.common, params.insId);
       console.log("上传");
       await uploader.run(drawingId);
 
       console.log("上传zip完成，uploadURL=", rootFilesystem.data.uploadURL);
 
-      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      const rootAttachDatas = (await Log.takeover(rootInsAttachTab.getTabData(), { action: Action.getTabList, number: rootInstanceNumber, tab: rootInsAttachTab.tabInfo.tab })) as Attachment[];
       /** 此次流程生成图纸的行数据 */
       const drawRowData = rootAttachDatas.find((item) => {
         const fileid = item.getAttrValue({
@@ -140,6 +145,7 @@ export async function downloadDraw(params: TransformArgument) {
       if (drawRowData == null) {
         //如果没找到此次流程生成图纸的行数据，则中断后续处理
         console.log("没找到此次流程生成图纸的行数据，中断后续处理");
+        Log.takeover(Promise.reject("没找到此次流程生成图纸的行数据，中断后续处理"), { action: Action.queryDrawing, number: rootInstanceNumber, tab: rootInsAttachTab.tabInfo.tab }).catch(() => {});
         return;
       }
 
@@ -153,7 +159,7 @@ export async function downloadDraw(params: TransformArgument) {
        * 这里拿到了此次流程生成的rowId   drawRowData.rowId
        * 再后面的修改就不知道怎么处理了
        */
-      await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
+      await sdk.updateFileAttachment(rootFilesystem, drawRowData.rowId);
       await downloader.remove();
     }
   } catch (error) { }
@@ -169,23 +175,24 @@ export async function transformOstep(params: TransformArgument) {
     if (await exists("./transform.zip")) {
       await rm("./transform.zip", { force: true });
     }
-    const data = await sdk.getStructureTab(params.insId);
+    const data = await Log.takeover(sdk.getStructureTab(params.insId), { action: Action.getStructureTab, number: params.insId });
     /** 根实例 */
     const rootInstance = data[0];
+    const rootInstanceNumber = rootInstance.basicReadInstanceInfo.number;
     if (!rootInstance.basicReadInstanceInfo.insBom) {
       return
     }
-    const rootInsAttachTab = await rootInstance.getTabByApicode({
+    const rootInsAttachTab = await Log.takeover(rootInstance.getTabByApicode({
       apicode: "Attachments",
-    });
+    }), { action: Action.getTab, number: rootInstanceNumber, tab: 'Attachments' });
 
-    const designTab = await rootInstance.getTabByApicode({
+    const designTab = await Log.takeover(rootInstance.getTabByApicode({
       apicode: "DesignFiles",
-    });
+    }), { action: Action.getTab, number:  rootInstanceNumber, tab: 'DesignFiles' });
 
-    const designData = designTab ? await designTab.getTabData() : []
+    const designData = designTab ? await Log.takeover(designTab.getTabData(), { action: Action.getTabList, tab: 'DesignFiles', number: rootInstanceNumber }) : []
     if (rootInsAttachTab && designData.length) {
-      await rootInsAttachTab.insertTabDataAttachments({
+      await Log.takeover(rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
             // name: `图纸`,
@@ -201,11 +208,11 @@ export async function transformOstep(params: TransformArgument) {
         onSuccess(msg) {
           console.log("上传成功==", msg);
         },
-      });
-      const downloader = new Downloader(data, sdk.common);
+      }), { action: Action.insertAttach, number: rootInstanceNumber });
+      const downloader = new Downloader(data, sdk.common, rootInstanceNumber);
       await downloader.runTransformOstep();
       const filesystem = await downloader.filesystem;
-      const convertor = new Convertor(filesystem);
+      const convertor = new Convertor(filesystem, rootInstanceNumber);
       let filePath = await convertor.transformOStep();
       if (filesystem.length == 0) {
         console.log("待处理的转换FS为空");
@@ -217,10 +224,10 @@ export async function transformOstep(params: TransformArgument) {
       rootFilesystem.saveAddressCustom = filePath;
       rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
       rootFilesystem.dimension = "modify";
-      const uploader = new Uploader([rootFilesystem], sdk.common);
+      const uploader = new Uploader([rootFilesystem], sdk.common, rootInstanceNumber);
       console.log("上传");
       await uploader.run(drawingId);
-      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      const rootAttachDatas = (await Log.takeover(rootInsAttachTab.getTabData(), { action: Action.getTabList, number: rootInstanceNumber, tab: rootInsAttachTab.tabInfo.tab })) as Attachment[];
       rootAttachDatas.map((item) =>
         item.getAttrValue({
           tab: rootInsAttachTab,
@@ -239,7 +246,7 @@ export async function transformOstep(params: TransformArgument) {
         console.log("没找到此次流程生成图纸的行数据，中断后续处理");
         return;
       }
-      await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
+      await sdk.updateFileAttachment(rootFilesystem, drawRowData.rowId);
       await downloader.remove();
     }
   } catch (error) {
@@ -255,22 +262,23 @@ export async function transformstep(params: TransformArgument) {
     if (await exists("./transform.zip")) {
       await rm("./transform.zip", { force: true });
     }
-    const data = await sdk.getStructureTab(params.insId);
+    const data = await Log.takeover(sdk.getStructureTab(params.insId), { action: Action.getStructureTab, number: params.insId });
     /** 根实例 */
     const rootInstance = data[0];
+    const rootInstanceNumber = rootInstance.basicReadInstanceInfo.number;
     if (rootInstance.basicReadInstanceInfo.insBom) {
       return
     }
-    const rootInsAttachTab = await rootInstance.getTabByApicode({
+    const rootInsAttachTab = await Log.takeover(rootInstance.getTabByApicode({
       apicode: "Attachments",
-    });
-    const designTab = await rootInstance.getTabByApicode({
+    }), { action: Action.getTab, number: rootInstanceNumber, tab: "Attachments" });
+    const designTab = await Log.takeover(rootInstance.getTabByApicode({
       apicode: "DesignFiles",
-    });
+    }), { action: Action.getTab, number: rootInstanceNumber, tab: "DesignFiles" });
 
-    const designData = designTab ? await designTab.getTabData() : []
+    const designData = designTab ? await Log.takeover(designTab.getTabData(), { action: Action.getTabList, tab: 'DesignFiles', number: rootInstanceNumber }) : []
     if (rootInsAttachTab && designData.length) {
-      await rootInsAttachTab.insertTabDataAttachments({
+      await Log.takeover(rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
             // name: `图纸`,
@@ -286,11 +294,11 @@ export async function transformstep(params: TransformArgument) {
         onSuccess(msg) {
           console.log("上传成功==", msg);
         },
-      });
-      const downloader = new Downloader(data, sdk.common);
+      }), { action: Action.insertAttach, number: rootInstanceNumber });;
+      const downloader = new Downloader(data, sdk.common, rootInstanceNumber);
       await downloader.runTransformOstep();
       const filesystem = await downloader.filesystem;
-      const convertor = new Convertor(filesystem);
+      const convertor = new Convertor(filesystem, rootInstanceNumber);
       let filePath = await convertor.transformStep();
       if (filesystem.length == 0) {
         console.log("待处理的转换FS为空");
@@ -302,10 +310,10 @@ export async function transformstep(params: TransformArgument) {
       rootFilesystem.saveAddressCustom = filePath;
       rootFilesystem.filename = `${rootFilesystem.data.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
       rootFilesystem.dimension = "modify";
-      const uploader = new Uploader([rootFilesystem], sdk.common);
+      const uploader = new Uploader([rootFilesystem], sdk.common, rootInstanceNumber);
       console.log("上传");
       await uploader.run(drawingId);
-      const rootAttachDatas = (await rootInsAttachTab.getTabData()) as Attachment[];
+      const rootAttachDatas = (await Log.takeover(rootInsAttachTab.getTabData(), { action: Action.getTabList, number: rootInstanceNumber, tab: rootInsAttachTab.tabInfo.tab })) as Attachment[];
       rootAttachDatas.map((item) =>
         item.getAttrValue({
           tab: rootInsAttachTab,
@@ -324,7 +332,7 @@ export async function transformstep(params: TransformArgument) {
         console.log("没找到此次流程生成图纸的行数据，中断后续处理");
         return;
       }
-      await sdk.updateFileAttachment([rootFilesystem], drawRowData.rowId);
+      await sdk.updateFileAttachment(rootFilesystem, drawRowData.rowId);
       await downloader.remove();
     }
   } catch (error) {

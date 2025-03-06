@@ -26,7 +26,7 @@ export default class Sdk {
     this.common = new CommonUtils({
       baseUrl: `http://${params.address || process.env.baseUrl}:8017/api/plm`,
       fetch: (...params: [any, any]) => {
-        return fetch(...params);
+        return Log.takeover(fetch(...params), { action: Action.request, params: JSON.stringify(params) });
       },
       isServe: true,
       ...params,
@@ -551,32 +551,35 @@ export default class Sdk {
   }
 
   /**更新下载图纸指定的附件 */
-  async updateFileAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {
-    const modifyFile = new ModifyFile(filesystem[0].manage);
+  async updateFileAttachment(filesystem: Filesystem<FileSelf>, drawRowId?: string) {
+    const modifyFile = new ModifyFile(filesystem.manage);
     console.log([
       {
-        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+        fileInsId: filesystem.data.basicReadInstanceInfo.insId,
         attachments: [
           {
             rowId: drawRowId || "",
-            url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "1" : "2",
+            url: filesystem.data.uploadURL || "",
+            mark: filesystem.data.uploadURL ? "1" : "2",
           },
         ],
       },
     ], '修改的數據')
-    return await modifyFile.modifyAttachments([
+    return await Log.takeover(modifyFile.modifyAttachments([
       {
-        fileInsId: filesystem[0].data.basicReadInstanceInfo.insId,
+        fileInsId: filesystem.data.basicReadInstanceInfo.insId,
         attachments: [
           {
             rowId: drawRowId || "",
-            url: filesystem[0].data.uploadURL || "",
-            mark: filesystem[0].data.uploadURL ? "1" : "2",
+            url: filesystem.data.uploadURL || "",
+            mark: filesystem.data.uploadURL ? "1" : "2",
           },
         ],
       },
-    ]);
+    ]), {
+      action: Action.modifyAttachments,
+      number: filesystem.data.basicReadInstanceInfo.number
+    });
   }
 
   private uploadAttachment(filesystem: Filesystem<FileSelf>[], drawRowId?: string) {

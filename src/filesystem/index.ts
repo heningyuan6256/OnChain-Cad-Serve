@@ -3,6 +3,7 @@ import { Attachment, FileSelf } from "../sdk/types";
 import { isAttachment, isFileSelf } from "../sdk/utils";
 import { mkdir, readFile } from "node:fs/promises";
 import { FileUploadInfo } from "../uploader/type";
+import { Action, Log } from "../log";
 
 export class Filesystem<T extends FileSelf | Attachment> {
   static downloadAddress = "./transform";
@@ -122,10 +123,10 @@ export class Filesystem<T extends FileSelf | Attachment> {
       }
       const file = new Filesystem(common, item);
       files.push(file);
-      await mkdir(file.localAddress, { recursive: true });
+      await Log.takeover(mkdir(file.localAddress, { recursive: true }), { action: Action.mkdir });
       if (file.attachments?.length) {
         for (const att of file.attachments) {
-          await mkdir(att.localAddress, { recursive: true });
+          await Log.takeover(mkdir(att.localAddress, { recursive: true }), { action: Action.mkdir });
         }
       }
     }

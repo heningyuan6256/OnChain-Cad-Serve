@@ -61,6 +61,7 @@ export class Log {
     position,
     tab,
     userId,
+    params,
   }: {
     /** 行为 */
     action: Action;
@@ -69,6 +70,7 @@ export class Log {
     number?: string;
     userId?: string;
     tab?: string;
+    params?: string;
     /** 报错位置 */
     position?: string;
   }) {
@@ -79,6 +81,7 @@ export class Log {
       ` ${number ?? "***"}/${action}`,
       tab ? `<tab: ${tab}>` : '',
       userId ? `<user: ${userId}>` : '',
+      params ? `<params: ${params}>` : '',
       `: ${typeof message == "string" ? message : message.message}`,
       ` (log:${position})`,
     ];
@@ -112,5 +115,24 @@ export enum Action {
   getLoginUser = "获取登录用户",
   getTabAttr = "获取页签属性",
   uploadPrintAttach = "上传打印文件到附件",
-  insertAttach = "添加附件"
+  insertAttach = "添加附件",
+  download = "下载文件",
+  upload = "上传文件",
+  queryDrawing = "查询图纸",
+  modifyAttachments = "修改附件URL、状态",
+  // 函数
+  getStructureTab = "获取实例页签数据结构",
+
+  //处理本地文件
+  mkdir = "创建transform目录",
+  deleteDir = "删除transform",
+  convert = "转换文件",
+  compress = "压缩",
+
+  // 设计工具
+  swExtensionUpdateAttr = "设计工具更新属性",
+  swExtensionPdf = "设计工具转pdf",
+  swExtensionRename = "设计工具重命名",
+  swExtensionOstep = "设计工具OStep",
+  swExtensionStep = "设计工具Step",
 }
