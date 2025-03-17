@@ -5,7 +5,7 @@ import Uploader from "./uploader";
 import { compressFolder } from "./utils/compress";
 import { exists, rm, readFile } from "node:fs/promises";
 import { Attachment } from "./sdk/types";
-import { AttachmentTransferStatus } from "onchain-sdk";
+import { AttachmentTransferStatus, ItemCode } from "onchain-sdk";
 import moment from "moment";
 
 export async function transform(params: TransformArgument) {
@@ -74,7 +74,7 @@ export async function downloadDraw(params: TransformArgument) {
       //   console.log('此实例已存在图纸数据，结束处理');
       //   return;
       // }
-      
+
       await rootInsAttachTab.insertTabDataAttachments({
         attachmentRows: [
           {
@@ -215,7 +215,24 @@ export async function transformOstep(params: TransformArgument) {
       const rootFilesystem = filesystem[0];
       //F把转换文件zip放到根去做上传
       rootFilesystem.saveAddressCustom = filePath;
-      rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}.STEP`;
+
+      let specName = ""
+      let insChange: any
+      const changeTab = await rootInstance.getTabByApicode({ apicode: "ChangeHistory" })!
+      if (changeTab) {
+        const insChangeData = await changeTab.getTabData()
+        insChange = insChangeData[0]
+      }
+      if (ItemCode.isChangeInstruction(insChange?.itemCode)) {
+        specName = '-试制'
+      } else {
+        if (rootInstance.basicReadInstanceInfo.lifecycle.code == 10007002) {
+          specName = '-试制'
+        } else {
+          specName = '-受控'
+        }
+      }
+      rootFilesystem.filename = `${rootInstance.basicReadInstanceInfo.insDesc}-客户参考-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${specName}.STEP`;
       rootFilesystem.dimension = "modify";
       const uploader = new Uploader([rootFilesystem], sdk.common);
       console.log("上传");
@@ -267,6 +284,22 @@ export async function transformstep(params: TransformArgument) {
     const designTab = await rootInstance.getTabByApicode({
       apicode: "DesignFiles",
     });
+    let specName = ""
+    let insChange: any
+    const changeTab = await rootInstance.getTabByApicode({ apicode: "ChangeHistory" })!
+    if (changeTab) {
+      const insChangeData = await changeTab.getTabData()
+      insChange = insChangeData[0]
+    }
+    if (ItemCode.isChangeInstruction(insChange?.itemCode)) {
+      specName = '-试制'
+    } else {
+      if (rootInstance.basicReadInstanceInfo.lifecycle.code == 10007002) {
+        specName = '-试制'
+      } else {
+        specName = '-受控'
+      }
+    }
 
     const designData = designTab ? await designTab.getTabData() : []
     if (rootInsAttachTab && designData.length) {
@@ -274,7 +307,7 @@ export async function transformstep(params: TransformArgument) {
         attachmentRows: [
           {
             // name: `图纸`,
-            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}.STEP`,
+            name: `${rootInstance.basicReadInstanceInfo.insDesc}-${rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0] === 'Draft' ? "草稿" : rootInstance.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}-${rootInstance.basicReadInstanceInfo.statusName}${specName}.STEP`,
             size: 0,
             extension: "STEP",
             id: drawingId,

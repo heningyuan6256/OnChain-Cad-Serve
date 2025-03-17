@@ -256,9 +256,15 @@ export default class Sdk {
                       relativePath: null,
                     },
                   });
-                  Uppys.uppy.on("complete", (res) => {
+                  Uppys.uppy.on("complete", async(res) => {
                     let specName = ''
-                    if (ItemCode.isChangeInstruction(change.basicReadInstanceInfo.itemCode)) {
+                    let insChange:any
+                    const changeTab = await instance.getTabByApicode({apicode:"ChangeHistory"})!
+                    if(changeTab){
+                      const insChangeData = await changeTab.getTabData()
+                      insChange = insChangeData[0]
+                    }
+                    if (ItemCode.isChangeInstruction(insChange?.itemCode)) {
                       specName = '-试制'
                     } else {
                       if (instance.basicReadInstanceInfo.lifecycle.code == 10007002) {
@@ -349,7 +355,7 @@ export default class Sdk {
             (user) => user.value == node.approve_instance_id
           )?.label;
           if (user) {
-            allNodes.push(...[`${item.name}=${user}`, `${item.name}日期=${node.update_time.split(" ")[0]}`])
+            allNodes.push(...[`${item.name}=${typeof user === 'string' ? user.split("(")[0]:user}`, `${item.name}日期=${node.update_time.split(" ")[0]}`])
           }
         }
       }
@@ -395,12 +401,25 @@ export default class Sdk {
         const changeNumber = instance.basicReadInstanceInfo.insVersionUnbound.split(" ")[1]
         const approvalNodeInfo = changeNumber ? await this.getChangeInfo(changeNumber) : []
 
+        const lifecycleData = []
+        if (rootInstance.basicReadInstanceInfo.lifecycle.code == 10007002) {
+          lifecycleData.push("阶段标记S=S")
+        } else if (rootInstance.basicReadInstanceInfo.lifecycle.code == 10007003) {
+          lifecycleData.push("阶段标记S=S")
+          lifecycleData.push("阶段标记A=A")
+        } else {
+          lifecycleData.push("阶段标记S=S")
+          lifecycleData.push("阶段标记A=A")
+          lifecycleData.push("阶段标记B=B")
+        }
+
+
         //把平铺后的设计文件信息写入实例最外层
         this.initializeFileInfo(instance, {
           fileId: instance.basicReadInstanceInfo.insId,
           fileName: instanceFileName,
           fileUrl: this.getFileUrl(instance, rootDesignAttrFileUrl),
-          approvalNodeInfo: approvalNodeInfo
+          approvalNodeInfo: [...approvalNodeInfo,...lifecycleData]
         });
 
         /** 平铺后单个实例的附件页签 */

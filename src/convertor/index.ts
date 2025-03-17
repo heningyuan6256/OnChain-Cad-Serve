@@ -49,9 +49,9 @@ export default class Convertor {
   async updateName() {
     const updateNameList = []
     for (const fsy of this.filesystem) {
-      const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${fsy.data.basicReadInstanceInfo.publishTime ? "-" + fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''}`
+      const updateName = `${fsy.filename.substring(0,fsy.filename.lastIndexOf("."))}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}`
       // console.log('updateName=', updateName);
-      updateNameList.push(`${fsy.filename.split(".")[0]}=${updateName}`)
+      updateNameList.push(`${fsy.filename.substring(0,fsy.filename.lastIndexOf("."))}=${updateName}`)
       //TODO 上一行在我这执行会报错，先暂时去掉报错的字符串
       // updateNameList.push(`${updateName}`)
     }
@@ -72,7 +72,7 @@ export default class Convertor {
     console.log("设计文件重命名完成")
     for (const fsy of this.filesystem) {
       await rm(fsy.saveAddress, { force: true })
-      const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}${fsy.data.basicReadInstanceInfo.publishTime ? "-" + fsy.data.basicReadInstanceInfo.publishTime.split(" ")[0].replace(/-/g, "") : ''}`
+      const updateName = `${fsy.filename.split(".")[0]}-${fsy.data.basicReadInstanceInfo.insVersionUnbound === 'Draft' ? "草稿" : fsy.data.basicReadInstanceInfo.insVersionUnbound.split(" ")[0]}`
       for (const attFsy of fsy.attachments || []) {
        if (attFsy.filename.endsWith(".slddrw") || attFsy.filename.endsWith(".SLDDRW")) {
           await rm(attFsy.saveAddress, { force: true }).catch(err => console.log(err, "附件重命名错误"))
