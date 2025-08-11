@@ -9,7 +9,7 @@ import { readFile } from 'node:fs/promises';
 const stringD = (await readFile(".env", { encoding: 'utf-8' })).toString()
 console.log(stringD, "stringD");
 
-const list = stringD.split("\r\n")
+const list = stringD.split(/\r?\n/);  // 处理不同系统的换行符
 
 const mapData: any = {}
 list.forEach(item => {
@@ -70,6 +70,15 @@ export const receivePulsarMessage = async () => {
             let publishedInstances;
             publishedInstances = JSON.parse(message.toString("UTF-8"))
             console.log(publishedInstances,'publishedInstances');
+
+            if (publishedInstances.data.type === 'transformDraw') {
+                await transform({
+                    insId: publishedInstances.data.resData.changeInsId,
+                    tenantId: publishedInstances.tenantId,
+                    userId: publishedInstances.data.userId,
+                    address: mapData.baseUrl
+                })
+            } 
             
             if (publishedInstances.data.reqData) {
                 const token = publishedInstances.token
@@ -82,13 +91,6 @@ export const receivePulsarMessage = async () => {
                         userId: publishedInstances.data.reqData.userId,
                         address: mapData.baseUrl
                     });
-                } else if (publishedInstances.data.reqData.type === 'transformDraw') {
-                    await transform({
-                        insId: publishedInstances.data.resData.changeInsId,
-                        tenantId: publishedInstances.tenantId,
-                        userId: publishedInstances.data.userId,
-                        address: mapData.baseUrl
-                    })
                 } else if (publishedInstances.data.reqData.type == 'transformOSTEP') {
                     await transformOstep({
                         tenantId: tenantId,

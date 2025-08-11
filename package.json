@@ -17,11 +17,11 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@pdfme/generator": "1.0.17",
     "@std/media-types": "npm:@jsr/std__media-types",
     "adm-zip": "^0.5.16",
     "onchain-pulsar": "0.0.3",
-    "onchain-sdk": "0.1.17",
-    "@pdfme/generator": "1.0.17",
+    "onchain-sdk": "file:.yalc/onchain-sdk",
     "pdf-lib": "^1.17.1",
     "pdf-merger-js": "^4.1.2"
   }

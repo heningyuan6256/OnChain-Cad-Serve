@@ -20,3 +20,10 @@ receivePulsarMessage().catch(console.error);
 //   insId: "1869577821047754754",
 //   userId: "1866744632978829313",
 // });
+
+
+// await transform({
+//     insId: '1871449051848830977',
+//     tenantId: '719',
+//     userId: '1866744625928204289'
+// })

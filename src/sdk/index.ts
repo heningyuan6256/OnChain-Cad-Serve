@@ -8,7 +8,6 @@ import {
   ModifyFile,
   IChangeInstance,
   PrintUtils,
-  placeFile,
   UppyUploader,
   AttachmentTransferStatus,
 } from "onchain-sdk";
@@ -37,8 +36,8 @@ export default class Sdk {
   async getAffectFiles(params: any) {
     const change = await this.common.getInstanceById<IChangeInstance>(
       params.insId
-    );
-    await change.getWorkflow();
+    )
+    await change.getWorkflow(); 
     // const review = change.basicReadInstanceInfo.workflowNodes.find(
     //   (node) => node.apicode == "Review"
     // )!;
@@ -177,12 +176,14 @@ export default class Sdk {
           const AttrsMap = utility.transformArrayToMap(Attrs, "apicode", "id");
 
           for (let attachmentData of instance.attachments) {
-            console.log(`111111111111111111111111111111111111111`);
+            console.log(`111111111111111111111111111111111111111`); 
+            console.log(this.common.baseUrl.slice(0, -3))
             let fileUrl = attachmentData[AttrsMap["FileUrl"]];
             let fileFormat = attachmentData[AttrsMap["FileFormat"]];
             let fileName = attachmentData[AttrsMap["FileName"]];
             let fileId = attachmentData[AttrsMap["FileId"]];
             PrintUtils.autoUploadPrintFileToAttachment({
+              //@ts-ignore
               user: params.userId,
               fileFormat: fileFormat,
               itemCode: String(attachmentData.itemCode),
@@ -191,9 +192,10 @@ export default class Sdk {
               insDesc: instance.basicReadInstanceInfo.insDesc,
               latestCurrentUserInfo: { current: roles },
               insId: attachmentData.insId,
-              insRevision: instance.basicReadInstanceInfo.insVersionOrder,
+              insRevision: String(instance.basicReadInstanceInfo.insVersionOrder),
               insVersion: instance.basicReadInstanceInfo.insVersion,
               fonts: await readFile("./public/TsangerYuYangT_W03_W03.ttf"),
+              routeLink: this.common.baseUrl.slice(0, -3),
               // fonts: '',
               // StorageController,
               transferformListByCodeList: async (n1: any, n2: any) => {
@@ -255,11 +257,10 @@ export default class Sdk {
                 return res;
               },
               serveColumms: Attrs,
-              placeFile,
               converBytes: utility.converBytes,
               transfer2D: async () => {
                 let hostorigin = "http://192.168.0.62:8017";
-                console.log(444)
+                console.log(444) 
                 console.log(
                   fileUrl.includes("http")
                     ? `${hostorigin}/api/plm${
@@ -301,6 +302,7 @@ export default class Sdk {
                     "/api/plm",
                     ""
                   )}/api/plm/files`,
+                  fileLimitSize: 1000 * 1024 * 1024
                 });
                 Uppys.addFile({
                   source: "Local",
@@ -335,7 +337,7 @@ export default class Sdk {
               },
             });
           }
-          console.log("---------------------------");
+          console.log("---------------------------");   
         } else {
           instance.attachments = [];
         }
@@ -376,7 +378,6 @@ export default class Sdk {
       return [];
     }
   }
-
   /**
    * 获取结构数据，把根实例下所有附件信息写到外层，并处理isTransform
    */
